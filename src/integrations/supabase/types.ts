@@ -85,9 +85,39 @@ export type Database = {
         }
         Relationships: []
       }
+      favorites: {
+        Row: {
+          created_at: string
+          id: string
+          tour_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tour_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tour_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -96,6 +126,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -104,6 +135,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -153,6 +185,7 @@ export type Database = {
           description: string | null
           destination_id: string | null
           difficulty: Database["public"]["Enums"]["tour_difficulty"]
+          discount_price: number | null
           duration_days: number
           highlights: string[] | null
           id: string
@@ -169,6 +202,7 @@ export type Database = {
           description?: string | null
           destination_id?: string | null
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
+          discount_price?: number | null
           duration_days?: number
           highlights?: string[] | null
           id?: string
@@ -185,6 +219,7 @@ export type Database = {
           description?: string | null
           destination_id?: string | null
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
+          discount_price?: number | null
           duration_days?: number
           highlights?: string[] | null
           id?: string
