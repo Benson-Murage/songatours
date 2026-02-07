@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
-import { MapPin } from "lucide-react";
+import { MapPin, Heart } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useFavorites, useToggleFavorite } from "@/hooks/useTours";
 import type { Tour } from "@/hooks/useTours";
+import { toast } from "sonner";
 
 interface TourCardProps {
   tour: Tour;
@@ -8,17 +11,48 @@ interface TourCardProps {
 
 const TourCard = ({ tour }: TourCardProps) => {
   const destination = tour.destinations;
+  const { user } = useAuth();
+  const { data: favorites } = useFavorites(user?.id);
+  const toggleFavorite = useToggleFavorite();
+  const isFavorited = favorites?.includes(tour.id) ?? false;
+  const hasDiscount = tour.discount_price != null && tour.discount_price < tour.price_per_person;
+
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast.error("Sign in to save favorites");
+      return;
+    }
+    toggleFavorite.mutate({ tourId: tour.id, userId: user.id, isFavorited });
+  };
 
   return (
     <Link to={`/tours/${tour.id}`} className="group block">
       <article className="card-hover overflow-hidden rounded-2xl bg-card border border-border">
-        <div className="aspect-square overflow-hidden">
+        <div className="relative aspect-square overflow-hidden">
           <img
             src={tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=600&h=600&fit=crop"}
             alt={tour.title}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
           />
+          <button
+            onClick={handleFavorite}
+            className="absolute right-3 top-3 rounded-full bg-card/80 p-2 backdrop-blur-sm transition-all hover:scale-110"
+            aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart
+              className={`h-4 w-4 transition-colors ${
+                isFavorited ? "fill-destructive text-destructive" : "text-muted-foreground"
+              }`}
+            />
+          </button>
+          {hasDiscount && (
+            <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
+              Deal
+            </span>
+          )}
         </div>
         <div className="p-4">
           {destination && (
@@ -37,9 +71,20 @@ const TourCard = ({ tour }: TourCardProps) => {
           </p>
           <div className="mt-3 flex items-end justify-between">
             <div>
-              <span className="text-lg font-bold text-foreground">
-                ${Number(tour.price_per_person).toLocaleString()}
-              </span>
+              {hasDiscount ? (
+                <>
+                  <span className="text-sm text-muted-foreground line-through mr-1">
+                    ${Number(tour.price_per_person).toLocaleString()}
+                  </span>
+                  <span className="text-lg font-bold text-accent">
+                    ${Number(tour.discount_price).toLocaleString()}
+                  </span>
+                </>
+              ) : (
+                <span className="text-lg font-bold text-foreground">
+                  ${Number(tour.price_per_person).toLocaleString()}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground"> / person</span>
             </div>
             <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
