@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const navLinks = [
   { to: "/destinations", label: "Destinations" },
@@ -26,6 +27,7 @@ const navLinks = [
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
+  const { data: isAdmin } = useIsAdmin();
   const location = useLocation();
 
   const initials = user?.user_metadata?.full_name
@@ -86,11 +88,13 @@ const Navbar = () => {
                     <Briefcase className="h-4 w-4" /> My Trips
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/admin" className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" /> Admin
-                  </Link>
-                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" /> Admin
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={signOut}
@@ -139,14 +143,16 @@ const Navbar = () => {
                         <Briefcase className="h-4 w-4" /> My Trips
                       </Link>
                     </SheetClose>
-                    <SheetClose asChild>
-                      <Link
-                        to="/admin"
-                        className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary"
-                      >
-                        <Shield className="h-4 w-4" /> Admin
-                      </Link>
-                    </SheetClose>
+                    {isAdmin && (
+                      <SheetClose asChild>
+                        <Link
+                          to="/admin"
+                          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary"
+                        >
+                          <Shield className="h-4 w-4" /> Admin
+                        </Link>
+                      </SheetClose>
+                    )}
                   </>
                 )}
               </div>

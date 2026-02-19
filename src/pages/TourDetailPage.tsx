@@ -377,6 +377,39 @@ const TourDetailPage = () => {
           </aside>
         </div>
       </div>
+
+      {/* Mobile Fixed Bottom Booking Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            {hasDiscount ? (
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xs text-muted-foreground line-through">
+                  ${Number(tour.price_per_person).toLocaleString()}
+                </span>
+                <span className="text-lg font-bold text-accent">
+                  ${Number(tour.discount_price).toLocaleString()}
+                </span>
+                <span className="text-xs text-muted-foreground">/ person</span>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-1">
+                <span className="text-lg font-bold text-foreground">
+                  ${Number(tour.price_per_person).toLocaleString()}
+                </span>
+                <span className="text-xs text-muted-foreground">/ person</span>
+              </div>
+            )}
+          </div>
+          <Button variant="accent" size="lg" onClick={handleBook} disabled={booking} className="shrink-0">
+            {booking && <Loader2 className="h-4 w-4 animate-spin" />}
+            Book Now
+          </Button>
+        </div>
+      </div>
+
+      {/* Spacer for mobile bottom bar */}
+      <div className="h-20 lg:hidden" />
     </Layout>
   );
 };
