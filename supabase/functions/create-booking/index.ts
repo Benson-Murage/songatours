@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Invalid session" }, 401);
     }
     const userId = claimsData.claims.sub as string;
+    const userEmail = claimsData.claims.email as string;
 
     const { tour_id, start_date, guests_count } = await req.json();
 
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "You already have a pending booking for this tour on this date" }, 409);
     }
 
-    // Server-side price calculation — never trust frontend
+    // Server-side price calculation
     const effectivePrice =
       tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person)
         ? Number(tour.discount_price)
@@ -114,6 +115,33 @@ Deno.serve(async (req) => {
       console.error("Booking insert error:", insertError);
       return jsonResponse({ error: "Failed to create booking" }, 500);
     }
+
+    // Get user profile for name
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", userId)
+      .single();
+
+    // Send confirmation email (fire-and-forget — don't block booking response)
+    const emailUrl = `${supabaseUrl}/functions/v1/send-booking-email`;
+    fetch(emailUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        to_email: userEmail,
+        to_name: profile?.full_name || "",
+        booking_id: booking.id,
+        tour_title: tour.title,
+        start_date,
+        guests_count: guestsNum,
+        total_price: totalPrice,
+        type: "confirmation",
+      }),
+    }).catch((e) => console.error("Email send failed (non-blocking):", e));
 
     return jsonResponse({ booking }, 201);
   } catch (err) {
