@@ -40,13 +40,27 @@ const Dashboard = () => {
   });
 
   const cancelBooking = useMutation({
-    mutationFn: async (bookingId: string) => {
+    mutationFn: async (booking: any) => {
       const { error } = await supabase
         .from("bookings")
         .update({ status: "cancelled" as const })
-        .eq("id", bookingId)
+        .eq("id", booking.id)
         .eq("user_id", user!.id);
       if (error) throw error;
+
+      // Send cancellation email (fire-and-forget)
+      supabase.functions.invoke("send-booking-email", {
+        body: {
+          to_email: user!.email,
+          to_name: user!.user_metadata?.full_name || "",
+          booking_id: booking.id,
+          tour_title: booking.tours?.title || "Tour",
+          start_date: booking.start_date,
+          guests_count: booking.guests_count,
+          total_price: booking.total_price,
+          type: "cancellation",
+        },
+      }).catch(() => {});
     },
     onSuccess: () => {
       toast.success("Booking cancelled");
@@ -94,7 +108,7 @@ const Dashboard = () => {
           <span className="text-lg font-bold text-foreground">${Number(b.total_price).toLocaleString()}</span>
           <div className="flex gap-2">
             {b.status === "pending" && (
-              <Button variant="ghost" size="sm" onClick={() => cancelBooking.mutate(b.id)} className="text-destructive hover:text-destructive" disabled={cancelBooking.isPending}>
+              <Button variant="ghost" size="sm" onClick={() => cancelBooking.mutate(b)} className="text-destructive hover:text-destructive" disabled={cancelBooking.isPending}>
                 <XCircle className="mr-1 h-3 w-3" /> Cancel
               </Button>
             )}
