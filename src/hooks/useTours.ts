@@ -21,6 +21,7 @@ export interface Tour {
   difficulty: "Easy" | "Medium" | "Hard";
   highlights: string[] | null;
   included: string[] | null;
+  max_total_slots: number;
   max_group_size: number;
   image_url: string | null;
   status: "published" | "draft";

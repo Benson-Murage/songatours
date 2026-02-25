@@ -19,6 +19,7 @@ interface BookingEmailPayload {
   start_date: string;
   guests_count: number;
   total_price: number;
+  whatsapp_group_link?: string | null;
   type: "confirmation" | "cancellation";
 }
 
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
     }
 
     const payload: BookingEmailPayload = await req.json();
-    const { to_email, to_name, booking_id, tour_title, start_date, guests_count, total_price, type } = payload;
+    const { to_email, to_name, booking_id, tour_title, start_date, guests_count, total_price, whatsapp_group_link, type } = payload;
 
     if (!to_email || !booking_id || !tour_title) {
       return jsonResponse({ error: "Missing required fields" }, 400);
@@ -50,8 +51,18 @@ Deno.serve(async (req) => {
 
     const isConfirmation = type === "confirmation";
     const subject = isConfirmation
-      ? `Booking Confirmed — ${tour_title}`
-      : `Booking Cancelled — ${tour_title}`;
+      ? `Booking Confirmed - ${tour_title}`
+      : `Booking Cancelled - ${tour_title}`;
+
+    const whatsappCta = isConfirmation && whatsapp_group_link
+      ? `
+        <div style="margin-top: 20px; text-align: center;">
+          <a href="${whatsapp_group_link}" style="display: inline-block; background: #16a34a; color: white; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+            Join Tour WhatsApp Group
+          </a>
+        </div>
+      `
+      : "";
 
     const html = isConfirmation
       ? `
@@ -60,7 +71,7 @@ Deno.serve(async (req) => {
           <h1 style="color: #0F766E; font-size: 24px; margin: 0;">Songa Travel & Tours</h1>
         </div>
         <div style="background: #f9fafb; border-radius: 12px; padding: 32px; margin-bottom: 24px;">
-          <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px;">Booking Confirmed! 🎉</h2>
+          <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px;">Booking Confirmed</h2>
           <p style="color: #6B7280; font-size: 14px; margin: 0 0 24px;">Hi ${to_name || "Traveler"}, your adventure is booked.</p>
           <table style="width: 100%; border-collapse: collapse;">
             <tr><td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Tour</td><td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${tour_title}</td></tr>
@@ -69,6 +80,7 @@ Deno.serve(async (req) => {
             <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 12px 0; color: #111827; font-size: 16px; font-weight: 700;">Total</td><td style="padding: 12px 0; color: #0F766E; font-size: 16px; font-weight: 700; text-align: right;">$${Number(total_price).toLocaleString()}</td></tr>
           </table>
         </div>
+        ${whatsappCta}
         <p style="color: #6B7280; font-size: 13px; text-align: center;">Booking Reference: <strong>${booking_id.slice(0, 8).toUpperCase()}</strong></p>
         <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin-top: 8px;">Free cancellation available. Contact info@songatravel.com for support.</p>
       </div>`

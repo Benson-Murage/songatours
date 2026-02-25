@@ -23,6 +23,7 @@ const TourDetailPage = () => {
   const toggleFavorite = useToggleFavorite();
   const [startDate, setStartDate] = useState("");
   const [guests, setGuests] = useState(1);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [booking, setBooking] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
@@ -69,6 +70,8 @@ const TourDetailPage = () => {
     else if (new Date(startDate) < new Date()) newErrors.startDate = "Date must be in the future";
     if (guests < 1) newErrors.guests = "At least 1 guest required";
     if (guests > tour.max_group_size) newErrors.guests = `Maximum ${tour.max_group_size} guests`;
+    if (!phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
+    else if (!/^[+\d\s\-()]{7,24}$/.test(phoneNumber.trim())) newErrors.phoneNumber = "Enter a valid phone number";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -84,13 +87,17 @@ const TourDetailPage = () => {
     setBooking(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-booking", {
-        body: { tour_id: tour.id, start_date: startDate, guests_count: guests },
+        body: { tour_id: tour.id, start_date: startDate, guests_count: guests, phone_number: phoneNumber.trim() },
       });
 
       if (error || data?.error) {
         toast.error(data?.error || "Booking failed. Please try again.");
       } else {
-        toast.success("Booking confirmed! 🎉");
+        toast.success("Booking confirmed!");
+        if (data?.whatsapp_group_link) {
+          window.open(data.whatsapp_group_link, "_blank", "noopener,noreferrer");
+          toast.info("WhatsApp group invite opened in a new tab.");
+        }
         navigate("/dashboard");
       }
     } catch {
@@ -146,7 +153,6 @@ const TourDetailPage = () => {
     "https://images.unsplash.com/photo-1517960413843-0aee8e2b3285?w=600&h=400&fit=crop",
   ];
 
-  // Star distribution
   const starDistribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews?.filter((r: any) => r.rating === star).length || 0,
@@ -163,7 +169,6 @@ const TourDetailPage = () => {
           <ChevronLeft className="h-4 w-4" /> Back
         </button>
 
-        {/* Image Gallery */}
         <div className="grid gap-2 rounded-2xl overflow-hidden h-[300px] md:h-[450px] grid-cols-4 grid-rows-2">
           <div className="col-span-2 row-span-2">
             <img src={galleryImages[0]} alt={tour.title} className="h-full w-full object-cover" loading="eager" />
@@ -175,7 +180,6 @@ const TourDetailPage = () => {
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
-          {/* Tour Info */}
           <div className="lg:col-span-2 space-y-6">
             <div>
               <div className="flex items-start justify-between">
@@ -253,7 +257,6 @@ const TourDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-4 space-y-6">
-                {/* Rating Summary */}
                 {totalReviews > 0 ? (
                   <div className="flex flex-col sm:flex-row gap-6 rounded-2xl bg-secondary p-5">
                     <div className="text-center">
@@ -289,7 +292,6 @@ const TourDetailPage = () => {
                   </div>
                 )}
 
-                {/* Review List */}
                 {reviews?.map((review: any) => (
                   <div key={review.id} className="border-b border-border pb-4 last:border-0">
                     <div className="flex items-center gap-2 mb-2">
@@ -311,7 +313,6 @@ const TourDetailPage = () => {
                   </div>
                 ))}
 
-                {/* Write Review */}
                 {user ? (
                   <form onSubmit={handleReview} className="space-y-3 rounded-2xl bg-muted p-4">
                     <h4 className="font-medium text-sm">Leave a Review</h4>
@@ -347,7 +348,6 @@ const TourDetailPage = () => {
             </Tabs>
           </div>
 
-          {/* Booking Card */}
           <aside className="hidden lg:block lg:sticky lg:top-24 h-fit">
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
               <div className="flex items-baseline gap-2">
@@ -388,11 +388,26 @@ const TourDetailPage = () => {
                   />
                   {errors.guests && <p className="text-xs text-destructive">{errors.guests}</p>}
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phoneNumber" className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => { setPhoneNumber(e.target.value); setErrors((p) => ({ ...p, phoneNumber: "" })); }}
+                    placeholder="+255 700 000 000"
+                    className={errors.phoneNumber ? "border-destructive" : ""}
+                  />
+                  {errors.phoneNumber && <p className="text-xs text-destructive">{errors.phoneNumber}</p>}
+                </div>
               </div>
 
               <div className="space-y-2 border-t border-border pt-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">${effectivePrice.toLocaleString()} × {guests} guest{guests > 1 ? "s" : ""}</span>
+                  <span className="text-muted-foreground">${effectivePrice.toLocaleString()} x {guests} guest{guests > 1 ? "s" : ""}</span>
                   <span className="font-medium">${totalPrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-base font-bold">
@@ -418,7 +433,6 @@ const TourDetailPage = () => {
         </div>
       </div>
 
-      {/* Mobile Fixed Bottom Booking Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden transition-transform">
         <div className="flex items-center justify-between gap-4">
           <div>

@@ -1,11 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, MapPin, Users, Download, XCircle, Plane, Clock, CheckCircle2 } from "lucide-react";
+import { Calendar, MapPin, Users, Download, XCircle, Plane, CheckCircle2, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 
@@ -19,6 +29,7 @@ const Dashboard = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [bookingToCancel, setBookingToCancel] = useState<any | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -29,7 +40,7 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("*, tours(title, image_url, duration_days, destinations(name, country))")
+        .select("*, tours(title, image_url, duration_days, whatsapp_group_link, destinations(name, country))")
         .eq("user_id", user!.id)
         .order("start_date", { ascending: false });
       if (error) throw error;
@@ -43,12 +54,15 @@ const Dashboard = () => {
     mutationFn: async (booking: any) => {
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "cancelled" as const })
+        .update({
+          status: "cancelled" as const,
+          cancelled_at: new Date().toISOString(),
+          cancelled_by: user!.id,
+        })
         .eq("id", booking.id)
         .eq("user_id", user!.id);
       if (error) throw error;
 
-      // Send cancellation email (fire-and-forget)
       supabase.functions.invoke("send-booking-email", {
         body: {
           to_email: user!.email,
@@ -64,6 +78,7 @@ const Dashboard = () => {
     },
     onSuccess: () => {
       toast.success("Booking cancelled");
+      setBookingToCancel(null);
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
     },
     onError: () => toast.error("Failed to cancel booking"),
@@ -106,9 +121,24 @@ const Dashboard = () => {
         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>{status.label}</span>
           <span className="text-lg font-bold text-foreground">${Number(b.total_price).toLocaleString()}</span>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
+            {b.status !== "cancelled" && b.tours?.whatsapp_group_link && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(b.tours.whatsapp_group_link, "_blank", "noopener,noreferrer")}
+              >
+                <MessageCircle className="mr-1 h-3 w-3" /> WhatsApp Group
+              </Button>
+            )}
             {b.status === "pending" && (
-              <Button variant="ghost" size="sm" onClick={() => cancelBooking.mutate(b)} className="text-destructive hover:text-destructive" disabled={cancelBooking.isPending}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setBookingToCancel(b)}
+                className="text-destructive hover:text-destructive"
+                disabled={cancelBooking.isPending}
+              >
                 <XCircle className="mr-1 h-3 w-3" /> Cancel
               </Button>
             )}
@@ -179,6 +209,27 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!bookingToCancel} onOpenChange={(open) => !open && setBookingToCancel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action marks your booking as cancelled and cannot be undone automatically. Contact support if you need help restoring it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelBooking.isPending}>Keep Booking</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => bookingToCancel && cancelBooking.mutate(bookingToCancel)}
+              disabled={cancelBooking.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirm Cancel
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

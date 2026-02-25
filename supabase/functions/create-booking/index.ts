@@ -41,11 +41,16 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const userEmail = claimsData.claims.email as string;
 
-    const { tour_id, start_date, guests_count } = await req.json();
+    const { tour_id, start_date, guests_count, phone_number } = await req.json();
 
     // Validate inputs
-    if (!tour_id || !start_date || !guests_count) {
+    if (!tour_id || !start_date || !guests_count || !phone_number) {
       return jsonResponse({ error: "Missing required fields" }, 400);
+    }
+
+    const normalizedPhone = String(phone_number).trim();
+    if (normalizedPhone.length < 7 || normalizedPhone.length > 24) {
+      return jsonResponse({ error: "Please provide a valid phone number" }, 400);
     }
 
     const guestsNum = Number(guests_count);
@@ -63,7 +68,7 @@ Deno.serve(async (req) => {
     // Fetch tour server-side to get real price
     const { data: tour, error: tourError } = await supabaseAdmin
       .from("tours")
-      .select("id, price_per_person, discount_price, max_group_size, status, title")
+      .select("id, price_per_person, discount_price, max_group_size, max_total_slots, status, title, whatsapp_group_link")
       .eq("id", tour_id)
       .eq("status", "published")
       .single();
@@ -74,6 +79,28 @@ Deno.serve(async (req) => {
 
     if (guestsNum > tour.max_group_size) {
       return jsonResponse({ error: `Maximum group size is ${tour.max_group_size}` }, 400);
+    }
+
+    const { data: activeBookings, error: activeBookingsError } = await supabaseAdmin
+      .from("bookings")
+      .select("guests_count")
+      .eq("tour_id", tour.id)
+      .eq("start_date", start_date)
+      .in("status", ["pending", "paid"]);
+
+    if (activeBookingsError) {
+      console.error("Failed to check capacity:", activeBookingsError);
+      return jsonResponse({ error: "Could not verify availability" }, 500);
+    }
+
+    const alreadyBookedSlots = (activeBookings || []).reduce((sum, booking) => sum + Number(booking.guests_count || 0), 0);
+    const remainingSlots = Number(tour.max_total_slots) - alreadyBookedSlots;
+    if (guestsNum > remainingSlots) {
+      return jsonResponse({
+        error: remainingSlots <= 0
+          ? "This departure is sold out. Please choose another date."
+          : `Only ${remainingSlots} slot(s) left for this date.`,
+      }, 409);
     }
 
     // Prevent duplicate pending bookings for same tour+user+date
@@ -105,6 +132,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         start_date,
         guests_count: guestsNum,
+        phone_number: normalizedPhone,
         total_price: totalPrice,
         status: "pending",
       })
@@ -139,11 +167,17 @@ Deno.serve(async (req) => {
         start_date,
         guests_count: guestsNum,
         total_price: totalPrice,
+        whatsapp_group_link: tour.whatsapp_group_link,
         type: "confirmation",
       }),
     }).catch((e) => console.error("Email send failed (non-blocking):", e));
 
-    return jsonResponse({ booking }, 201);
+    return jsonResponse({
+      booking,
+      whatsapp_group_link: tour.whatsapp_group_link,
+      remaining_slots: remainingSlots - guestsNum,
+      max_total_slots: tour.max_total_slots,
+    }, 201);
   } catch (err) {
     console.error("Unexpected error:", err);
     return jsonResponse({ error: "Internal server error" }, 500);

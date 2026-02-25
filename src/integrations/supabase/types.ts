@@ -16,9 +16,12 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string
           guests_count: number
           id: string
+          phone_number: string | null
           start_date: string
           status: Database["public"]["Enums"]["booking_status"]
           total_price: number
@@ -26,9 +29,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           guests_count?: number
           id?: string
+          phone_number?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["booking_status"]
           total_price?: number
@@ -36,9 +42,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           guests_count?: number
           id?: string
+          phone_number?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["booking_status"]
           total_price?: number
@@ -191,11 +200,13 @@ export type Database = {
           id: string
           image_url: string | null
           included: string[] | null
+          max_total_slots: number
           max_group_size: number
           price_per_person: number
           status: Database["public"]["Enums"]["tour_status"]
           title: string
           updated_at: string
+          whatsapp_group_link: string | null
         }
         Insert: {
           created_at?: string
@@ -208,11 +219,13 @@ export type Database = {
           id?: string
           image_url?: string | null
           included?: string[] | null
+          max_total_slots?: number
           max_group_size?: number
           price_per_person?: number
           status?: Database["public"]["Enums"]["tour_status"]
           title: string
           updated_at?: string
+          whatsapp_group_link?: string | null
         }
         Update: {
           created_at?: string
@@ -225,11 +238,13 @@ export type Database = {
           id?: string
           image_url?: string | null
           included?: string[] | null
+          max_total_slots?: number
           max_group_size?: number
           price_per_person?: number
           status?: Database["public"]["Enums"]["tour_status"]
           title?: string
           updated_at?: string
+          whatsapp_group_link?: string | null
         }
         Relationships: [
           {
