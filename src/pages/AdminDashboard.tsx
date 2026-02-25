@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -47,7 +47,7 @@ const AdminDashboard = () => {
 
   const isAdmin = !!role;
 
-  const { data: adminTours, isLoading: toursLoading } = useQuery({
+  const { data: adminTours, isLoading: toursLoading, error: toursError } = useQuery({
     queryKey: ["admin-tours"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -70,7 +70,7 @@ const AdminDashboard = () => {
     enabled: isAdmin,
   });
 
-  const { data: adminBookings, isLoading: bookingsLoading } = useQuery({
+  const { data: adminBookings, isLoading: bookingsLoading, error: bookingsError } = useQuery({
     queryKey: ["admin-bookings"],
     queryFn: async () => {
       const { data: bookings, error } = await supabase
@@ -201,6 +201,15 @@ const AdminDashboard = () => {
           <StatCard icon={Users} label="Cancelled Bookings" value={String(stats.cancelledBookings)} />
           <StatCard icon={Globe} label="Total Tours" value={String(stats.totalTours)} />
         </div>
+
+        {(toursError || bookingsError) && (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
+            <p className="font-medium text-destructive mb-1">Database migration required</p>
+            <p className="text-muted-foreground">
+              New admin features need new columns (for capacity, phones, and cancellation audit). Run the latest Supabase migration, then reload.
+            </p>
+          </div>
+        )}
 
         {soldOutAlerts.length > 0 && (
           <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">
@@ -518,6 +527,9 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Tour</DialogTitle>
+          <DialogDescription>
+            Create a tour with destination, capacity, and optional WhatsApp group link.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5">
