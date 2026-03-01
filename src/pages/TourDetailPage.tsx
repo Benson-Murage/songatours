@@ -1,13 +1,24 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { MapPin, Clock, Users, Star, ChevronLeft, Loader2, CheckCircle2, Heart, ShieldCheck, Phone, XCircle } from "lucide-react";
+import {
+  MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, Loader2,
+  CheckCircle2, Heart, ShieldCheck, Phone, XCircle, AlertTriangle, MessageCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useTour, useReviews, useFavorites, useToggleFavorite } from "@/hooks/useTours";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useTour, useReviews, useFavorites, useToggleFavorite, useTourCapacity } from "@/hooks/useTours";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,14 +32,20 @@ const TourDetailPage = () => {
   const { data: reviews } = useReviews(id!);
   const { data: favorites } = useFavorites(user?.id);
   const toggleFavorite = useToggleFavorite();
+
   const [startDate, setStartDate] = useState("");
   const [guests, setGuests] = useState(1);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [specialRequests, setSpecialRequests] = useState("");
   const [booking, setBooking] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [whatsappModal, setWhatsappModal] = useState<string | null>(null);
+
+  const { data: capacity } = useTourCapacity(id!, startDate || undefined);
 
   const isFavorited = favorites?.includes(id!) ?? false;
   const avgRating = reviews?.length
@@ -59,10 +76,21 @@ const TourDetailPage = () => {
     );
   }
 
+  const isCanceled = tour.status === "canceled";
   const hasDiscount = tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person);
   const effectivePrice = hasDiscount ? Number(tour.discount_price) : Number(tour.price_per_person);
   const totalPrice = effectivePrice * guests;
   const destination = tour.destinations as { name: string; country: string } | null;
+
+  // Build gallery from tour_images + fallback to image_url
+  const tourImages = (tour.tour_images || [])
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((img) => img.image_url);
+  const galleryImages = tourImages.length > 0
+    ? tourImages
+    : [tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop"];
+
+  const soldOut = capacity?.soldOut ?? false;
 
   const validateBooking = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -70,6 +98,7 @@ const TourDetailPage = () => {
     else if (new Date(startDate) < new Date()) newErrors.startDate = "Date must be in the future";
     if (guests < 1) newErrors.guests = "At least 1 guest required";
     if (guests > tour.max_group_size) newErrors.guests = `Maximum ${tour.max_group_size} guests`;
+    if (capacity && guests > capacity.remaining) newErrors.guests = `Only ${capacity.remaining} spot(s) left`;
     if (!phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
     else if (!/^[+\d\s\-()]{7,24}$/.test(phoneNumber.trim())) newErrors.phoneNumber = "Enter a valid phone number";
     setErrors(newErrors);
@@ -87,7 +116,13 @@ const TourDetailPage = () => {
     setBooking(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-booking", {
-        body: { tour_id: tour.id, start_date: startDate, guests_count: guests, phone_number: phoneNumber.trim() },
+        body: {
+          tour_id: tour.id,
+          start_date: startDate,
+          guests_count: guests,
+          phone_number: phoneNumber.trim(),
+          special_requests: specialRequests.trim() || null,
+        },
       });
 
       if (error || data?.error) {
@@ -95,10 +130,10 @@ const TourDetailPage = () => {
       } else {
         toast.success("Booking confirmed!");
         if (data?.whatsapp_group_link) {
-          window.open(data.whatsapp_group_link, "_blank", "noopener,noreferrer");
-          toast.info("WhatsApp group invite opened in a new tab.");
+          setWhatsappModal(data.whatsapp_group_link);
+        } else {
+          navigate("/dashboard");
         }
-        navigate("/dashboard");
       }
     } catch {
       toast.error("Something went wrong. Please try again.");
@@ -145,19 +180,14 @@ const TourDetailPage = () => {
     toggleFavorite.mutate({ tourId: tour.id, userId: user.id, isFavorited });
   };
 
-  const galleryImages = [
-    tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop",
-    "https://images.unsplash.com/photo-1523805009345-7448845a9e53?w=600&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=600&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1489392191049-fc10c97e64b6?w=600&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1517960413843-0aee8e2b3285?w=600&h=400&fit=crop",
-  ];
-
   const starDistribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews?.filter((r: any) => r.rating === star).length || 0,
   }));
   const totalReviews = reviews?.length || 0;
+
+  const nextImage = () => setGalleryIndex((i) => (i + 1) % galleryImages.length);
+  const prevImage = () => setGalleryIndex((i) => (i - 1 + galleryImages.length) % galleryImages.length);
 
   return (
     <Layout>
@@ -169,14 +199,47 @@ const TourDetailPage = () => {
           <ChevronLeft className="h-4 w-4" /> Back
         </button>
 
-        <div className="grid gap-2 rounded-2xl overflow-hidden h-[300px] md:h-[450px] grid-cols-4 grid-rows-2">
-          <div className="col-span-2 row-span-2">
+        {/* Gallery */}
+        <div className="relative rounded-2xl overflow-hidden h-[300px] md:h-[450px]">
+          {galleryImages.length > 1 ? (
+            <>
+              <div className="flex h-full transition-transform duration-500" style={{ transform: `translateX(-${galleryIndex * 100}%)` }}>
+                {galleryImages.map((src, i) => (
+                  <img key={i} src={src} alt={`${tour.title} - ${i + 1}`} className="h-full w-full object-cover shrink-0" style={{ minWidth: "100%" }} loading={i === 0 ? "eager" : "lazy"} />
+                ))}
+              </div>
+              <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-card/80 p-2 backdrop-blur-sm hover:bg-card transition-colors" aria-label="Previous image">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button onClick={nextImage} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-card/80 p-2 backdrop-blur-sm hover:bg-card transition-colors" aria-label="Next image">
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {galleryImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setGalleryIndex(i)}
+                    className={`h-2 w-2 rounded-full transition-all ${i === galleryIndex ? "bg-primary-foreground w-4" : "bg-primary-foreground/50"}`}
+                    aria-label={`Go to image ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
             <img src={galleryImages[0]} alt={tour.title} className="h-full w-full object-cover" loading="eager" />
-          </div>
-          <div><img src={galleryImages[1]} alt="Gallery" className="h-full w-full object-cover" loading="lazy" /></div>
-          <div><img src={galleryImages[2]} alt="Gallery" className="h-full w-full object-cover" loading="lazy" /></div>
-          <div className="hidden md:block"><img src={galleryImages[3]} alt="Gallery" className="h-full w-full object-cover" loading="lazy" /></div>
-          <div className="hidden md:block"><img src={galleryImages[4]} alt="Gallery" className="h-full w-full object-cover" loading="lazy" /></div>
+          )}
+
+          {/* SOLD OUT badge */}
+          {soldOut && (
+            <div className="absolute top-4 left-4 rounded-full bg-destructive px-4 py-1.5 text-sm font-bold text-destructive-foreground shadow-lg">
+              SOLD OUT
+            </div>
+          )}
+          {isCanceled && (
+            <div className="absolute top-4 left-4 rounded-full bg-destructive px-4 py-1.5 text-sm font-bold text-destructive-foreground shadow-lg">
+              CANCELED
+            </div>
+          )}
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
@@ -203,7 +266,7 @@ const TourDetailPage = () => {
 
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {tour.duration_days} days</span>
-                <span className="flex items-center gap-1"><Users className="h-4 w-4" /> Max {tour.max_group_size} guests</span>
+                <span className="flex items-center gap-1"><Users className="h-4 w-4" /> Max {tour.max_group_size} per group</span>
                 <span className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-accent text-accent" />
                   {avgRating || "New"} {totalReviews > 0 ? `(${totalReviews} review${totalReviews > 1 ? "s" : ""})` : ""}
@@ -212,12 +275,28 @@ const TourDetailPage = () => {
                   {tour.difficulty}
                 </span>
               </div>
+
+              {/* Capacity indicator */}
+              {capacity && !isCanceled && (
+                <div className="mt-4 rounded-xl bg-secondary p-3">
+                  <div className="flex items-center justify-between text-sm mb-1.5">
+                    <span className="text-muted-foreground">
+                      {startDate ? `Availability for ${new Date(startDate).toLocaleDateString()}` : "Overall availability"}
+                    </span>
+                    <span className={`font-medium ${soldOut ? "text-destructive" : "text-primary"}`}>
+                      {soldOut ? "Sold Out" : `${capacity.remaining} spots left`}
+                    </span>
+                  </div>
+                  <Progress value={capacity.total > 0 ? ((capacity.booked || 0) / capacity.total) * 100 : 0} className="h-2" />
+                </div>
+              )}
             </div>
 
             <Tabs defaultValue="overview">
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="included">What's Included</TabsTrigger>
+                <TabsTrigger value="included">Included</TabsTrigger>
+                <TabsTrigger value="excluded">Excluded</TabsTrigger>
                 <TabsTrigger value="highlights">Highlights</TabsTrigger>
                 <TabsTrigger value="reviews">Reviews ({totalReviews})</TabsTrigger>
               </TabsList>
@@ -239,6 +318,20 @@ const TourDetailPage = () => {
                   </ul>
                 ) : (
                   <p className="text-muted-foreground">Details coming soon.</p>
+                )}
+              </TabsContent>
+
+              <TabsContent value="excluded" className="mt-4">
+                {tour.excluded?.length ? (
+                  <ul className="space-y-2">
+                    {tour.excluded.map((item, i) => (
+                      <li key={i} className="flex items-center gap-2 text-muted-foreground">
+                        <XCircle className="h-4 w-4 text-destructive shrink-0" /> {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">No exclusions listed.</p>
                 )}
               </TabsContent>
 
@@ -348,8 +441,15 @@ const TourDetailPage = () => {
             </Tabs>
           </div>
 
+          {/* Booking sidebar */}
           <aside className="hidden lg:block lg:sticky lg:top-24 h-fit">
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+              {isCanceled && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" /> This tour has been canceled
+                </div>
+              )}
+
               <div className="flex items-baseline gap-2">
                 {hasDiscount ? (
                   <>
@@ -362,102 +462,177 @@ const TourDetailPage = () => {
                 <span className="text-sm text-muted-foreground">/ person</span>
               </div>
 
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => { setStartDate(e.target.value); setErrors((p) => ({ ...p, startDate: "" })); }}
-                    min={new Date().toISOString().split("T")[0]}
-                    className={errors.startDate ? "border-destructive" : ""}
-                  />
-                  {errors.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
+              {!isCanceled && !soldOut && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => { setStartDate(e.target.value); setErrors((p) => ({ ...p, startDate: "" })); }}
+                      min={new Date().toISOString().split("T")[0]}
+                      className={errors.startDate ? "border-destructive" : ""}
+                    />
+                    {errors.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="guests">Guests</Label>
+                    <Input
+                      id="guests"
+                      type="number"
+                      min={1}
+                      max={Math.min(tour.max_group_size, capacity?.remaining ?? tour.max_group_size)}
+                      value={guests}
+                      onChange={(e) => { setGuests(Number(e.target.value)); setErrors((p) => ({ ...p, guests: "" })); }}
+                      className={errors.guests ? "border-destructive" : ""}
+                    />
+                    {errors.guests && <p className="text-xs text-destructive">{errors.guests}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phoneNumber" className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5" /> Phone Number
+                    </Label>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => { setPhoneNumber(e.target.value); setErrors((p) => ({ ...p, phoneNumber: "" })); }}
+                      placeholder="+255 700 000 000"
+                      className={errors.phoneNumber ? "border-destructive" : ""}
+                    />
+                    {errors.phoneNumber && <p className="text-xs text-destructive">{errors.phoneNumber}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="specialRequests">Special Requests (optional)</Label>
+                    <textarea
+                      id="specialRequests"
+                      value={specialRequests}
+                      onChange={(e) => setSpecialRequests(e.target.value)}
+                      placeholder="Dietary needs, accessibility, etc."
+                      className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
+                      rows={2}
+                      maxLength={1000}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="guests">Guests</Label>
-                  <Input
-                    id="guests"
-                    type="number"
-                    min={1}
-                    max={tour.max_group_size}
-                    value={guests}
-                    onChange={(e) => { setGuests(Number(e.target.value)); setErrors((p) => ({ ...p, guests: "" })); }}
-                    className={errors.guests ? "border-destructive" : ""}
-                  />
-                  {errors.guests && <p className="text-xs text-destructive">{errors.guests}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phoneNumber" className="flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5" />
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => { setPhoneNumber(e.target.value); setErrors((p) => ({ ...p, phoneNumber: "" })); }}
-                    placeholder="+255 700 000 000"
-                    className={errors.phoneNumber ? "border-destructive" : ""}
-                  />
-                  {errors.phoneNumber && <p className="text-xs text-destructive">{errors.phoneNumber}</p>}
-                </div>
-              </div>
+              )}
 
-              <div className="space-y-2 border-t border-border pt-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">${effectivePrice.toLocaleString()} x {guests} guest{guests > 1 ? "s" : ""}</span>
-                  <span className="font-medium">${totalPrice.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-base font-bold">
-                  <span>Total</span>
-                  <span className="text-foreground">${totalPrice.toLocaleString()}</span>
-                </div>
-              </div>
+              {!isCanceled && !soldOut && (
+                <>
+                  <div className="space-y-2 border-t border-border pt-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">${effectivePrice.toLocaleString()} x {guests} guest{guests > 1 ? "s" : ""}</span>
+                      <span className="font-medium">${totalPrice.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold">
+                      <span>Total</span>
+                      <span className="text-foreground">${totalPrice.toLocaleString()}</span>
+                    </div>
+                  </div>
 
-              <Button variant="accent" className="w-full" size="lg" onClick={handleBook} disabled={booking}>
-                {booking && <Loader2 className="h-4 w-4 animate-spin" />}
-                Book Now
-              </Button>
+                  <Button variant="accent" className="w-full" size="lg" onClick={handleBook} disabled={booking}>
+                    {booking && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Book Now
+                  </Button>
 
-              <div className="space-y-2 text-center">
-                <p className="text-xs text-muted-foreground">You won't be charged yet</p>
-                <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Secure booking</span>
-                  <span className="flex items-center gap-1"><XCircle className="h-3.5 w-3.5" /> Free cancellation</span>
+                  <div className="space-y-2 text-center">
+                    <p className="text-xs text-muted-foreground">You won't be charged yet</p>
+                    <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Secure booking</span>
+                      <span className="flex items-center gap-1"><XCircle className="h-3.5 w-3.5" /> Free cancellation</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {soldOut && !isCanceled && (
+                <div className="rounded-lg bg-destructive/10 p-4 text-center">
+                  <AlertTriangle className="h-6 w-6 text-destructive mx-auto mb-2" />
+                  <p className="font-semibold text-destructive">Sold Out</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try selecting a different date</p>
                 </div>
-              </div>
+              )}
             </div>
           </aside>
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden transition-transform">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            {hasDiscount ? (
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xs text-muted-foreground line-through">${Number(tour.price_per_person).toLocaleString()}</span>
-                <span className="text-lg font-bold text-accent">${Number(tour.discount_price).toLocaleString()}</span>
-                <span className="text-xs text-muted-foreground">/ person</span>
-              </div>
-            ) : (
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-foreground">${Number(tour.price_per_person).toLocaleString()}</span>
-                <span className="text-xs text-muted-foreground">/ person</span>
-              </div>
-            )}
-            <p className="text-[10px] text-muted-foreground">Free cancellation</p>
+      {/* Mobile bottom bar */}
+      {!isCanceled && !soldOut && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden transition-transform">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              {hasDiscount ? (
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xs text-muted-foreground line-through">${Number(tour.price_per_person).toLocaleString()}</span>
+                  <span className="text-lg font-bold text-accent">${Number(tour.discount_price).toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">/ person</span>
+                </div>
+              ) : (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-foreground">${Number(tour.price_per_person).toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">/ person</span>
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground">Free cancellation</p>
+            </div>
+            <Button variant="accent" size="lg" onClick={handleBook} disabled={booking} className="shrink-0">
+              {booking && <Loader2 className="h-4 w-4 animate-spin" />}
+              Book Now
+            </Button>
           </div>
-          <Button variant="accent" size="lg" onClick={handleBook} disabled={booking} className="shrink-0">
-            {booking && <Loader2 className="h-4 w-4 animate-spin" />}
-            Book Now
-          </Button>
         </div>
-      </div>
+      )}
+
+      {soldOut && !isCanceled && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-destructive/10 p-4 lg:hidden text-center">
+          <p className="font-semibold text-destructive">This departure is sold out</p>
+        </div>
+      )}
 
       <div className="h-20 lg:hidden" />
+
+      {/* WhatsApp Group Modal */}
+      <Dialog open={!!whatsappModal} onOpenChange={(open) => {
+        if (!open) {
+          setWhatsappModal(null);
+          navigate("/dashboard");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Booking Confirmed!
+            </DialogTitle>
+            <DialogDescription>
+              Join the tour's WhatsApp group to stay connected with your guide and fellow travelers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="rounded-xl bg-secondary p-4 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">Tour WhatsApp Group</p>
+              <Button
+                variant="accent"
+                size="lg"
+                className="w-full"
+                onClick={() => window.open(whatsappModal!, "_blank", "noopener,noreferrer")}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Join WhatsApp Group
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => { setWhatsappModal(null); navigate("/dashboard"); }}
+            >
+              Go to My Trips
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
