@@ -29,7 +29,6 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
-    // Verify user via JWT claims
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -41,9 +40,8 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const userEmail = claimsData.claims.email as string;
 
-    const { tour_id, start_date, guests_count, phone_number } = await req.json();
+    const { tour_id, start_date, guests_count, phone_number, special_requests } = await req.json();
 
-    // Validate inputs
     if (!tour_id || !start_date || !guests_count || !phone_number) {
       return jsonResponse({ error: "Missing required fields" }, 400);
     }
@@ -65,22 +63,29 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Start date must be today or in the future" }, 400);
     }
 
-    // Fetch tour server-side to get real price
+    const sanitizedRequests = special_requests ? String(special_requests).trim().slice(0, 1000) : null;
+
+    // Fetch tour server-side
     const { data: tour, error: tourError } = await supabaseAdmin
       .from("tours")
-      .select("id, price_per_person, discount_price, max_group_size, max_total_slots, status, title, whatsapp_group_link")
+      .select("id, price_per_person, discount_price, max_group_size, max_total_slots, status, title, whatsapp_group_link, duration_days")
       .eq("id", tour_id)
-      .eq("status", "published")
       .single();
 
     if (tourError || !tour) {
-      return jsonResponse({ error: "Tour not found or not available" }, 404);
+      return jsonResponse({ error: "Tour not found" }, 404);
+    }
+
+    // Block booking on non-published tours
+    if (tour.status !== "published") {
+      return jsonResponse({ error: "This tour is not available for booking" }, 400);
     }
 
     if (guestsNum > tour.max_group_size) {
       return jsonResponse({ error: `Maximum group size is ${tour.max_group_size}` }, 400);
     }
 
+    // Check capacity
     const { data: activeBookings, error: activeBookingsError } = await supabaseAdmin
       .from("bookings")
       .select("guests_count")
@@ -93,7 +98,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Could not verify availability" }, 500);
     }
 
-    const alreadyBookedSlots = (activeBookings || []).reduce((sum, booking) => sum + Number(booking.guests_count || 0), 0);
+    const alreadyBookedSlots = (activeBookings || []).reduce((sum, b) => sum + Number(b.guests_count || 0), 0);
     const remainingSlots = Number(tour.max_total_slots) - alreadyBookedSlots;
     if (guestsNum > remainingSlots) {
       return jsonResponse({
@@ -103,7 +108,7 @@ Deno.serve(async (req) => {
       }, 409);
     }
 
-    // Prevent duplicate pending bookings for same tour+user+date
+    // Prevent duplicate pending bookings
     const { data: existing } = await supabaseAdmin
       .from("bookings")
       .select("id")
@@ -117,12 +122,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "You already have a pending booking for this tour on this date" }, 409);
     }
 
-    // Server-side price calculation
+    // Price calculation
     const effectivePrice =
       tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person)
         ? Number(tour.discount_price)
         : Number(tour.price_per_person);
     const totalPrice = effectivePrice * guestsNum;
+
+    // Calculate end_date
+    const endDate = new Date(parsedDate);
+    endDate.setDate(endDate.getDate() + (Number(tour.duration_days) - 1));
+    const endDateStr = endDate.toISOString().split("T")[0];
 
     // Insert booking
     const { data: booking, error: insertError } = await supabaseAdmin
@@ -131,8 +141,10 @@ Deno.serve(async (req) => {
         tour_id: tour.id,
         user_id: userId,
         start_date,
+        end_date: endDateStr,
         guests_count: guestsNum,
         phone_number: normalizedPhone,
+        special_requests: sanitizedRequests,
         total_price: totalPrice,
         status: "pending",
       })
@@ -151,7 +163,7 @@ Deno.serve(async (req) => {
       .eq("id", userId)
       .single();
 
-    // Send confirmation email (fire-and-forget — don't block booking response)
+    // Send confirmation email (fire-and-forget)
     const emailUrl = `${supabaseUrl}/functions/v1/send-booking-email`;
     fetch(emailUrl, {
       method: "POST",

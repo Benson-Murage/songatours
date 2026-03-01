@@ -10,10 +10,19 @@ export interface Destination {
   slug: string;
 }
 
+export interface TourImage {
+  id: string;
+  tour_id: string;
+  image_url: string;
+  display_order: number;
+  created_at: string;
+}
+
 export interface Tour {
   id: string;
   destination_id: string | null;
   title: string;
+  slug: string | null;
   description: string | null;
   price_per_person: number;
   discount_price: number | null;
@@ -21,11 +30,14 @@ export interface Tour {
   difficulty: "Easy" | "Medium" | "Hard";
   highlights: string[] | null;
   included: string[] | null;
-  max_total_slots: number;
+  excluded: string[] | null;
   max_group_size: number;
+  max_total_slots: number;
   image_url: string | null;
-  status: "published" | "draft";
+  whatsapp_group_link: string | null;
+  status: "published" | "draft" | "canceled" | "completed";
   destinations?: Destination | null;
+  tour_images?: TourImage[];
 }
 
 export const useDestinations = () =>
@@ -42,7 +54,10 @@ export const useTours = (destinationSlug?: string) =>
   useQuery({
     queryKey: ["tours", destinationSlug],
     queryFn: async () => {
-      let query = supabase.from("tours").select("*, destinations(*)");
+      let query = supabase
+        .from("tours")
+        .select("*, destinations(*), tour_images(*)")
+        .in("status", ["published"]);
       if (destinationSlug) {
         const { data: dest } = await supabase
           .from("destinations")
@@ -63,13 +78,46 @@ export const useTour = (tourId: string) =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tours")
-        .select("*, destinations(*)")
+        .select("*, destinations(*), tour_images(*)")
         .eq("id", tourId)
         .single();
       if (error) throw error;
       return data as Tour;
     },
     enabled: !!tourId,
+  });
+
+export const useTourCapacity = (tourId: string, startDate?: string) =>
+  useQuery({
+    queryKey: ["tour-capacity", tourId, startDate],
+    queryFn: async () => {
+      const { data: tour } = await supabase
+        .from("tours")
+        .select("max_total_slots")
+        .eq("id", tourId)
+        .single();
+
+      if (!tour) return { remaining: 0, total: 0, soldOut: true };
+
+      let bookedQuery = supabase
+        .from("bookings")
+        .select("guests_count")
+        .eq("tour_id", tourId)
+        .in("status", ["pending", "paid"]);
+
+      if (startDate) {
+        bookedQuery = bookedQuery.eq("start_date", startDate);
+      }
+
+      const { data: bookings } = await bookedQuery;
+      const booked = (bookings || []).reduce((sum, b) => sum + Number(b.guests_count || 0), 0);
+      const total = Number(tour.max_total_slots);
+      const remaining = Math.max(0, total - booked);
+
+      return { remaining, total, booked, soldOut: remaining <= 0 };
+    },
+    enabled: !!tourId,
+    refetchInterval: 30000,
   });
 
 export const useReviews = (tourId: string) =>

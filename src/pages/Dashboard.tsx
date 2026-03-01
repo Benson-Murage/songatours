@@ -55,10 +55,10 @@ const Dashboard = () => {
       const { error } = await supabase
         .from("bookings")
         .update({
-          status: "cancelled" as const,
+          status: "cancelled" as any,
           cancelled_at: new Date().toISOString(),
           cancelled_by: user!.id,
-        })
+        } as any)
         .eq("id", booking.id)
         .eq("user_id", user!.id);
       if (error) throw error;

@@ -19,9 +19,11 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           created_at: string
+          end_date: string | null
           guests_count: number
           id: string
           phone_number: string | null
+          special_requests: string | null
           start_date: string
           status: Database["public"]["Enums"]["booking_status"]
           total_price: number
@@ -32,9 +34,11 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string
+          end_date?: string | null
           guests_count?: number
           id?: string
           phone_number?: string | null
+          special_requests?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["booking_status"]
           total_price?: number
@@ -45,9 +49,11 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string
+          end_date?: string | null
           guests_count?: number
           id?: string
           phone_number?: string | null
+          special_requests?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["booking_status"]
           total_price?: number
@@ -131,6 +137,8 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_admin: boolean | null
+          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -140,6 +148,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_admin?: boolean | null
+          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -149,6 +159,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_admin?: boolean | null
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -188,6 +200,38 @@ export type Database = {
           },
         ]
       }
+      tour_images: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          tour_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          tour_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          tour_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_images_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tours: {
         Row: {
           created_at: string
@@ -196,13 +240,15 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["tour_difficulty"]
           discount_price: number | null
           duration_days: number
+          excluded: string[] | null
           highlights: string[] | null
           id: string
           image_url: string | null
           included: string[] | null
-          max_total_slots: number
           max_group_size: number
+          max_total_slots: number
           price_per_person: number
+          slug: string | null
           status: Database["public"]["Enums"]["tour_status"]
           title: string
           updated_at: string
@@ -215,13 +261,15 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
           discount_price?: number | null
           duration_days?: number
+          excluded?: string[] | null
           highlights?: string[] | null
           id?: string
           image_url?: string | null
           included?: string[] | null
-          max_total_slots?: number
           max_group_size?: number
+          max_total_slots?: number
           price_per_person?: number
+          slug?: string | null
           status?: Database["public"]["Enums"]["tour_status"]
           title: string
           updated_at?: string
@@ -234,13 +282,15 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
           discount_price?: number | null
           duration_days?: number
+          excluded?: string[] | null
           highlights?: string[] | null
           id?: string
           image_url?: string | null
           included?: string[] | null
-          max_total_slots?: number
           max_group_size?: number
+          max_total_slots?: number
           price_per_person?: number
+          slug?: string | null
           status?: Database["public"]["Enums"]["tour_status"]
           title?: string
           updated_at?: string
@@ -291,7 +341,7 @@ export type Database = {
       app_role: "admin" | "user"
       booking_status: "pending" | "paid" | "cancelled"
       tour_difficulty: "Easy" | "Medium" | "Hard"
-      tour_status: "published" | "draft"
+      tour_status: "published" | "draft" | "canceled" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -422,7 +472,7 @@ export const Constants = {
       app_role: ["admin", "user"],
       booking_status: ["pending", "paid", "cancelled"],
       tour_difficulty: ["Easy", "Medium", "Hard"],
-      tour_status: ["published", "draft"],
+      tour_status: ["published", "draft", "canceled", "completed"],
     },
   },
 } as const
