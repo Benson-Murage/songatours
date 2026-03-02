@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import TourDetailPage from "./pages/TourDetailPage";
 import DestinationsPage from "./pages/DestinationsPage";
+import RoadTripsPage from "./pages/RoadTripsPage";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AboutPage from "./pages/AboutPage";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/tours/:id" element={<TourDetailPage />} />
             <Route path="/destinations" element={<DestinationsPage />} />
+            <Route path="/road-trips" element={<RoadTripsPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/about" element={<AboutPage />} />

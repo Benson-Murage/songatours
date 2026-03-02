@@ -35,6 +35,7 @@ export interface Tour {
   max_total_slots: number;
   image_url: string | null;
   whatsapp_group_link: string | null;
+  category: string;
   status: "published" | "draft" | "canceled" | "completed";
   destinations?: Destination | null;
   tour_images?: TourImage[];
@@ -50,14 +51,19 @@ export const useDestinations = () =>
     },
   });
 
-export const useTours = (destinationSlug?: string) =>
+export const useTours = (destinationSlug?: string, category?: string) =>
   useQuery({
-    queryKey: ["tours", destinationSlug],
+    queryKey: ["tours", destinationSlug, category],
     queryFn: async () => {
       let query = supabase
         .from("tours")
         .select("*, destinations(*), tour_images(*)")
         .in("status", ["published"]);
+
+      if (category) {
+        query = query.eq("category", category);
+      }
+
       if (destinationSlug) {
         const { data: dest } = await supabase
           .from("destinations")

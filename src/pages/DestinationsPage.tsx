@@ -1,25 +1,41 @@
 import { useSearchParams } from "react-router-dom";
-import { X, SlidersHorizontal } from "lucide-react";
+import { X, SlidersHorizontal, Search } from "lucide-react";
 import Layout from "@/components/Layout";
 import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useTours, useDestinations } from "@/hooks/useTours";
+import { useState, useMemo } from "react";
 
 const DestinationsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSlug = searchParams.get("destination") || "";
   const guestsFilter = searchParams.get("guests") || "";
-  const { data: tours, isLoading, isError } = useTours(activeSlug || undefined);
+  const categoryFilter = searchParams.get("category") || "";
+  const { data: tours, isLoading, isError } = useTours(activeSlug || undefined, categoryFilter || undefined);
   const { data: destinations } = useDestinations();
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredTours = guestsFilter
-    ? tours?.filter((t) => t.max_group_size >= Number(guestsFilter))
-    : tours;
+  const filteredTours = useMemo(() => {
+    let result = tours || [];
+    if (guestsFilter) {
+      result = result.filter((t) => t.max_group_size >= Number(guestsFilter));
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((t) =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description || "").toLowerCase().includes(q) ||
+        (t.destinations?.name || "").toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [tours, guestsFilter, searchQuery]);
 
-  const hasActiveFilters = !!activeSlug || !!guestsFilter;
+  const hasActiveFilters = !!activeSlug || !!guestsFilter || !!categoryFilter;
 
-  const clearFilters = () => setSearchParams({});
+  const clearFilters = () => { setSearchParams({}); setSearchQuery(""); };
 
   const setDestFilter = (slug: string) => {
     const params = new URLSearchParams(searchParams);
@@ -32,7 +48,7 @@ const DestinationsPage = () => {
     <Layout>
       <div className="container mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold">Explore Destinations</h1>
+          <h1 className="text-3xl font-bold">Explore Tours</h1>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
               <X className="h-4 w-4 mr-1" /> Clear filters
@@ -40,6 +56,17 @@ const DestinationsPage = () => {
           )}
         </div>
         <p className="text-muted-foreground mb-6">Find your perfect African adventure</p>
+
+        {/* Search */}
+        <div className="relative mb-4 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Search tours..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
 
         {/* Active filter badges */}
         {hasActiveFilters && (
@@ -57,10 +84,16 @@ const DestinationsPage = () => {
                 <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete("guests"); setSearchParams(p); }} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
+            {categoryFilter && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary capitalize">
+                {categoryFilter}
+                <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete("category"); setSearchParams(p); }} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+              </span>
+            )}
           </div>
         )}
 
-        {/* Filter chips */}
+        {/* Destination chips */}
         <div className="mb-8 flex flex-wrap gap-2">
           <button
             onClick={() => setDestFilter("")}
@@ -95,7 +128,7 @@ const DestinationsPage = () => {
               <TourCardSkeleton key={i} />
             ))}
           </div>
-        ) : filteredTours && filteredTours.length > 0 ? (
+        ) : filteredTours.length > 0 ? (
           <>
             <p className="text-sm text-muted-foreground mb-4">{filteredTours.length} tour{filteredTours.length > 1 ? "s" : ""} found</p>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

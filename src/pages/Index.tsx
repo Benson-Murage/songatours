@@ -4,13 +4,14 @@ import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
 import DestinationCard from "@/components/DestinationCard";
 import { useTours, useDestinations } from "@/hooks/useTours";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Car } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-safari.jpg";
 
 const Index = () => {
   const { data: tours, isLoading } = useTours();
+  const { data: roadTrips } = useTours(undefined, "roadtrip");
   const { data: destinations } = useDestinations();
 
   const dealTours = tours?.filter((t) => t.discount_price != null && t.discount_price < t.price_per_person) ?? [];
@@ -20,19 +21,14 @@ const Index = () => {
     <Layout>
       {/* Hero */}
       <section className="relative flex min-h-[75vh] items-center justify-center overflow-hidden">
-        <img
-          src={heroImage}
-          alt="African savanna at golden hour"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        <img src={heroImage} alt="African savanna at golden hour" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60" />
         <div className="relative z-10 w-full max-w-4xl px-4 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-widest text-accent animate-fade-in">
             Premium African Tourism
           </p>
           <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl drop-shadow-lg animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            Discover Africa's{" "}
-            <span className="text-accent">Hidden Wonders</span>
+            Discover Africa's <span className="text-accent">Hidden Wonders</span>
           </h1>
           <p className="mx-auto mb-8 max-w-xl text-lg text-white/80 animate-fade-in" style={{ animationDelay: "0.2s" }}>
             Curated tours through breathtaking landscapes, vibrant cultures, and unforgettable wildlife encounters.
@@ -58,9 +54,32 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {destinations.map((dest) => (
-              <DestinationCard key={dest.id} destination={dest} />
-            ))}
+            {destinations.map((dest) => <DestinationCard key={dest.id} destination={dest} />)}
+          </div>
+        </section>
+      )}
+
+      {/* Road Trips */}
+      {roadTrips && roadTrips.length > 0 && (
+        <section className="bg-primary/5 py-16">
+          <div className="container mx-auto px-4">
+            <div className="mb-8 flex items-end justify-between">
+              <div className="flex items-center gap-3">
+                <Car className="h-7 w-7 text-primary" />
+                <div>
+                  <h2 className="text-3xl font-bold text-foreground">Road Trips</h2>
+                  <p className="mt-1 text-muted-foreground">Hit the open road and explore Africa</p>
+                </div>
+              </div>
+              <Link to="/road-trips">
+                <Button variant="ghost" size="sm" className="hidden sm:flex">
+                  View All <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {roadTrips.slice(0, 4).map((tour) => <TourCard key={tour.id} tour={tour} />)}
+            </div>
           </div>
         </section>
       )}
@@ -74,9 +93,7 @@ const Index = () => {
               <p className="mt-1 text-muted-foreground">Grab these limited-time discounts before they're gone</p>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {dealTours.map((tour) => (
-                <TourCard key={tour.id} tour={tour} />
-              ))}
+              {dealTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
             </div>
           </div>
         </section>
@@ -98,15 +115,11 @@ const Index = () => {
 
         {isLoading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <TourCardSkeleton key={i} />
-            ))}
+            {Array.from({ length: 8 }).map((_, i) => <TourCardSkeleton key={i} />)}
           </div>
         ) : featuredTours.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {featuredTours.map((tour) => (
-              <TourCard key={tour.id} tour={tour} />
-            ))}
+            {featuredTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
           </div>
         ) : (
           <div className="py-20 text-center">
@@ -123,9 +136,7 @@ const Index = () => {
             Join thousands of travelers who've discovered Africa's magic with Songa.
           </p>
           <Link to="/auth">
-            <Button variant="accent" size="lg">
-              Get Started Today
-            </Button>
+            <Button variant="accent" size="lg">Get Started Today</Button>
           </Link>
         </div>
       </section>

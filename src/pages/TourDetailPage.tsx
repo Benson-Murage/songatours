@@ -12,17 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { useTour, useReviews, useFavorites, useToggleFavorite, useTourCapacity } from "@/hooks/useTours";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
+
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop";
 
 const TourDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -82,20 +80,19 @@ const TourDetailPage = () => {
   const totalPrice = effectivePrice * guests;
   const destination = tour.destinations as { name: string; country: string } | null;
 
-  // Build gallery from tour_images + fallback to image_url
   const tourImages = (tour.tour_images || [])
     .sort((a, b) => a.display_order - b.display_order)
     .map((img) => img.image_url);
   const galleryImages = tourImages.length > 0
     ? tourImages
-    : [tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop"];
+    : [tour.image_url || FALLBACK_IMG];
 
   const soldOut = capacity?.soldOut ?? false;
 
   const validateBooking = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!startDate) newErrors.startDate = "Please select a start date";
-    else if (new Date(startDate) < new Date()) newErrors.startDate = "Date must be in the future";
+    else if (new Date(startDate) < new Date(new Date().toDateString())) newErrors.startDate = "Date must be in the future";
     if (guests < 1) newErrors.guests = "At least 1 guest required";
     if (guests > tour.max_group_size) newErrors.guests = `Maximum ${tour.max_group_size} guests`;
     if (capacity && guests > capacity.remaining) newErrors.guests = `Only ${capacity.remaining} spot(s) left`;
@@ -143,46 +140,30 @@ const TourDetailPage = () => {
 
   const handleReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast.error("Please sign in to leave a review");
-      return;
-    }
-    if (!reviewText.trim()) {
-      toast.error("Please write a comment");
-      return;
-    }
+    if (!user) { toast.error("Please sign in to leave a review"); return; }
+    if (!reviewText.trim()) { toast.error("Please write a comment"); return; }
     setSubmittingReview(true);
     const { error } = await supabase.from("reviews").insert({
-      tour_id: tour.id,
-      user_id: user.id,
-      rating: reviewRating,
-      comment: reviewText.trim(),
+      tour_id: tour.id, user_id: user.id, rating: reviewRating, comment: reviewText.trim(),
     });
     if (error) {
       if (error.message.includes("row-level security")) {
         toast.error("You need a booking for this tour before leaving a review");
-      } else {
-        toast.error("Failed to submit review");
-      }
+      } else { toast.error("Failed to submit review"); }
     } else {
       toast.success("Review submitted!");
-      setReviewText("");
-      setReviewRating(5);
+      setReviewText(""); setReviewRating(5);
     }
     setSubmittingReview(false);
   };
 
   const handleToggleFavorite = () => {
-    if (!user) {
-      toast.error("Sign in to save favorites");
-      return;
-    }
+    if (!user) { toast.error("Sign in to save favorites"); return; }
     toggleFavorite.mutate({ tourId: tour.id, userId: user.id, isFavorited });
   };
 
   const starDistribution = [5, 4, 3, 2, 1].map((star) => ({
-    star,
-    count: reviews?.filter((r: any) => r.rating === star).length || 0,
+    star, count: reviews?.filter((r: any) => r.rating === star).length || 0,
   }));
   const totalReviews = reviews?.length || 0;
 
@@ -192,10 +173,7 @@ const TourDetailPage = () => {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft className="h-4 w-4" /> Back
         </button>
 
@@ -205,7 +183,15 @@ const TourDetailPage = () => {
             <>
               <div className="flex h-full transition-transform duration-500" style={{ transform: `translateX(-${galleryIndex * 100}%)` }}>
                 {galleryImages.map((src, i) => (
-                  <img key={i} src={src} alt={`${tour.title} - ${i + 1}`} className="h-full w-full object-cover shrink-0" style={{ minWidth: "100%" }} loading={i === 0 ? "eager" : "lazy"} />
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`${tour.title} - ${i + 1}`}
+                    className="h-full w-full object-cover shrink-0"
+                    style={{ minWidth: "100%" }}
+                    loading={i === 0 ? "eager" : "lazy"}
+                    onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                  />
                 ))}
               </div>
               <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-card/80 p-2 backdrop-blur-sm hover:bg-card transition-colors" aria-label="Previous image">
@@ -226,10 +212,15 @@ const TourDetailPage = () => {
               </div>
             </>
           ) : (
-            <img src={galleryImages[0]} alt={tour.title} className="h-full w-full object-cover" loading="eager" />
+            <img
+              src={galleryImages[0]}
+              alt={tour.title}
+              className="h-full w-full object-cover"
+              loading="eager"
+              onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+            />
           )}
 
-          {/* SOLD OUT badge */}
           {soldOut && (
             <div className="absolute top-4 left-4 rounded-full bg-destructive px-4 py-1.5 text-sm font-bold text-destructive-foreground shadow-lg">
               SOLD OUT
@@ -255,11 +246,7 @@ const TourDetailPage = () => {
                   )}
                   <h1 className="text-3xl font-bold text-foreground">{tour.title}</h1>
                 </div>
-                <button
-                  onClick={handleToggleFavorite}
-                  className="rounded-full bg-secondary p-2.5 transition-all hover:scale-110"
-                  aria-label="Toggle favorite"
-                >
+                <button onClick={handleToggleFavorite} className="rounded-full bg-secondary p-2.5 transition-all hover:scale-110" aria-label="Toggle favorite">
                   <Heart className={`h-5 w-5 ${isFavorited ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
                 </button>
               </div>
@@ -271,12 +258,14 @@ const TourDetailPage = () => {
                   <Star className="h-4 w-4 fill-accent text-accent" />
                   {avgRating || "New"} {totalReviews > 0 ? `(${totalReviews} review${totalReviews > 1 ? "s" : ""})` : ""}
                 </span>
-                <span className="rounded-full bg-secondary px-3 py-0.5 text-xs font-medium text-secondary-foreground">
-                  {tour.difficulty}
-                </span>
+                <span className="rounded-full bg-secondary px-3 py-0.5 text-xs font-medium text-secondary-foreground">{tour.difficulty}</span>
+                {tour.category && (
+                  <span className="rounded-full bg-primary/10 px-3 py-0.5 text-xs font-medium text-primary capitalize">
+                    {tour.category === "roadtrip" ? "Road Trip" : tour.category}
+                  </span>
+                )}
               </div>
 
-              {/* Capacity indicator */}
               {capacity && !isCanceled && (
                 <div className="mt-4 rounded-xl bg-secondary p-3">
                   <div className="flex items-center justify-between text-sm mb-1.5">
@@ -316,9 +305,7 @@ const TourDetailPage = () => {
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-muted-foreground">Details coming soon.</p>
-                )}
+                ) : <p className="text-muted-foreground">Details coming soon.</p>}
               </TabsContent>
 
               <TabsContent value="excluded" className="mt-4">
@@ -330,9 +317,7 @@ const TourDetailPage = () => {
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-muted-foreground">No exclusions listed.</p>
-                )}
+                ) : <p className="text-muted-foreground">No exclusions listed.</p>}
               </TabsContent>
 
               <TabsContent value="highlights" className="mt-4">
@@ -344,9 +329,7 @@ const TourDetailPage = () => {
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-muted-foreground">Details coming soon.</p>
-                )}
+                ) : <p className="text-muted-foreground">Details coming soon.</p>}
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-4 space-y-6">
@@ -367,10 +350,7 @@ const TourDetailPage = () => {
                           <span className="w-3 text-muted-foreground">{star}</span>
                           <Star className="h-3 w-3 text-accent" />
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-accent rounded-full transition-all"
-                              style={{ width: totalReviews > 0 ? `${(count / totalReviews) * 100}%` : "0%" }}
-                            />
+                            <div className="h-full bg-accent rounded-full transition-all" style={{ width: totalReviews > 0 ? `${(count / totalReviews) * 100}%` : "0%" }} />
                           </div>
                           <span className="w-6 text-right text-muted-foreground">{count}</span>
                         </div>
@@ -466,54 +446,38 @@ const TourDetailPage = () => {
                 <div className="space-y-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="startDate">Start Date</Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={startDate}
+                    <Input id="startDate" type="date" value={startDate}
                       onChange={(e) => { setStartDate(e.target.value); setErrors((p) => ({ ...p, startDate: "" })); }}
                       min={new Date().toISOString().split("T")[0]}
-                      className={errors.startDate ? "border-destructive" : ""}
-                    />
+                      className={errors.startDate ? "border-destructive" : ""} />
                     {errors.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="guests">Guests</Label>
-                    <Input
-                      id="guests"
-                      type="number"
-                      min={1}
+                    <Input id="guests" type="number" min={1}
                       max={Math.min(tour.max_group_size, capacity?.remaining ?? tour.max_group_size)}
                       value={guests}
                       onChange={(e) => { setGuests(Number(e.target.value)); setErrors((p) => ({ ...p, guests: "" })); }}
-                      className={errors.guests ? "border-destructive" : ""}
-                    />
+                      className={errors.guests ? "border-destructive" : ""} />
                     {errors.guests && <p className="text-xs text-destructive">{errors.guests}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="phoneNumber" className="flex items-center gap-1.5">
                       <Phone className="h-3.5 w-3.5" /> Phone Number
                     </Label>
-                    <Input
-                      id="phoneNumber"
-                      type="tel"
-                      value={phoneNumber}
+                    <Input id="phoneNumber" type="tel" value={phoneNumber}
                       onChange={(e) => { setPhoneNumber(e.target.value); setErrors((p) => ({ ...p, phoneNumber: "" })); }}
                       placeholder="+255 700 000 000"
-                      className={errors.phoneNumber ? "border-destructive" : ""}
-                    />
+                      className={errors.phoneNumber ? "border-destructive" : ""} />
                     {errors.phoneNumber && <p className="text-xs text-destructive">{errors.phoneNumber}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="specialRequests">Special Requests (optional)</Label>
-                    <textarea
-                      id="specialRequests"
-                      value={specialRequests}
+                    <textarea id="specialRequests" value={specialRequests}
                       onChange={(e) => setSpecialRequests(e.target.value)}
                       placeholder="Dietary needs, accessibility, etc."
                       className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
-                      rows={2}
-                      maxLength={1000}
-                    />
+                      rows={2} maxLength={1000} />
                   </div>
                 </div>
               )}
@@ -560,7 +524,7 @@ const TourDetailPage = () => {
 
       {/* Mobile bottom bar */}
       {!isCanceled && !soldOut && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden transition-transform">
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden">
           <div className="flex items-center justify-between gap-4">
             <div>
               {hasDiscount ? (
@@ -595,10 +559,7 @@ const TourDetailPage = () => {
 
       {/* WhatsApp Group Modal */}
       <Dialog open={!!whatsappModal} onOpenChange={(open) => {
-        if (!open) {
-          setWhatsappModal(null);
-          navigate("/dashboard");
-        }
+        if (!open) { setWhatsappModal(null); navigate("/dashboard"); }
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -613,21 +574,14 @@ const TourDetailPage = () => {
           <div className="space-y-4 pt-2">
             <div className="rounded-xl bg-secondary p-4 text-center space-y-3">
               <p className="text-sm text-muted-foreground">Tour WhatsApp Group</p>
-              <Button
-                variant="accent"
-                size="lg"
-                className="w-full"
-                onClick={() => window.open(whatsappModal!, "_blank", "noopener,noreferrer")}
-              >
+              <Button variant="accent" size="lg" className="w-full"
+                onClick={() => window.open(whatsappModal!, "_blank", "noopener,noreferrer")}>
                 <MessageCircle className="mr-2 h-4 w-4" />
                 Join WhatsApp Group
               </Button>
             </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => { setWhatsappModal(null); navigate("/dashboard"); }}
-            >
+            <Button variant="outline" className="w-full"
+              onClick={() => { setWhatsappModal(null); navigate("/dashboard"); }}>
               Go to My Trips
             </Button>
           </div>
