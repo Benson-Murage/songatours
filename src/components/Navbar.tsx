@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, MapPin, User, LogOut, Briefcase, Shield } from "lucide-react";
+import { Menu, MapPin, User, LogOut, Briefcase, Shield, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,6 +20,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const navLinks = [
   { to: "/destinations", label: "Destinations" },
+  { to: "/road-trips", label: "Road Trips" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
 ];

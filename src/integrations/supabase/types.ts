@@ -234,6 +234,7 @@ export type Database = {
       }
       tours: {
         Row: {
+          category: string
           created_at: string
           description: string | null
           destination_id: string | null
@@ -255,6 +256,7 @@ export type Database = {
           whatsapp_group_link: string | null
         }
         Insert: {
+          category?: string
           created_at?: string
           description?: string | null
           destination_id?: string | null
@@ -276,6 +278,7 @@ export type Database = {
           whatsapp_group_link?: string | null
         }
         Update: {
+          category?: string
           created_at?: string
           description?: string | null
           destination_id?: string | null

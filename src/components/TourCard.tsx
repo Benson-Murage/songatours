@@ -9,6 +9,8 @@ interface TourCardProps {
   tour: Tour;
 }
 
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=600&h=600&fit=crop";
+
 const TourCard = ({ tour }: TourCardProps) => {
   const destination = tour.destinations;
   const { user } = useAuth();
@@ -16,6 +18,11 @@ const TourCard = ({ tour }: TourCardProps) => {
   const toggleFavorite = useToggleFavorite();
   const isFavorited = favorites?.includes(tour.id) ?? false;
   const hasDiscount = tour.discount_price != null && tour.discount_price < tour.price_per_person;
+
+  // Use first gallery image, fall back to image_url, then placeholder
+  const displayImage = tour.tour_images?.sort((a, b) => a.display_order - b.display_order)?.[0]?.image_url
+    || tour.image_url
+    || FALLBACK_IMG;
 
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -32,10 +39,11 @@ const TourCard = ({ tour }: TourCardProps) => {
       <article className="card-hover overflow-hidden rounded-2xl bg-card border border-border">
         <div className="relative aspect-square overflow-hidden">
           <img
-            src={tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=600&h=600&fit=crop"}
+            src={displayImage}
             alt={tour.title}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
           />
           <button
             onClick={handleFavorite}
@@ -51,6 +59,11 @@ const TourCard = ({ tour }: TourCardProps) => {
           {hasDiscount && (
             <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
               Deal
+            </span>
+          )}
+          {tour.category && tour.category !== "safari" && (
+            <span className="absolute left-3 bottom-3 rounded-full bg-card/80 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-foreground capitalize">
+              {tour.category === "roadtrip" ? "Road Trip" : tour.category}
             </span>
           )}
         </div>

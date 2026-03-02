@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image,
-  Loader2, Plus, Search, Trash2, Users, X,
+  AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
+  Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,9 +24,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
+const CATEGORIES = [
+  { value: "safari", label: "Safari" },
+  { value: "roadtrip", label: "Road Trip" },
+  { value: "hike", label: "Hiking" },
+  { value: "international", label: "International" },
+  { value: "beach", label: "Beach" },
+  { value: "cultural", label: "Cultural" },
+];
+
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-/* ─── Main Component ──────────────────────────────────────────────── */
 const AdminDashboard = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -54,13 +62,12 @@ const AdminDashboard = () => {
 
   const isAdmin = !!role;
 
-  /* ── Queries ── */
   const { data: adminTours, isLoading: toursLoading } = useQuery({
     queryKey: ["admin-tours"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tours")
-        .select("*, destinations(name), tour_images(id, image_url, display_order)")
+        .select("*, destinations(name, country), tour_images(id, image_url, display_order)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -83,7 +90,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, tours(title)")
+        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, tours(title, category, destinations(name))")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -103,23 +110,24 @@ const AdminDashboard = () => {
     enabled: isAdmin,
   });
 
-  /* ── Computed ── */
   const stats = useMemo(() => {
-    const totalRevenue = (adminBookings || []).reduce((sum: number, b: any) => sum + (b.status !== "cancelled" ? Number(b.total_price) : 0), 0);
+    const totalRevenue = (adminBookings || []).reduce((sum: number, b: any) => sum + (b.status === "paid" ? Number(b.total_price) : 0), 0);
     const activeBookings = (adminBookings || []).filter((b: any) => b.status === "pending" || b.status === "paid").length;
     const cancelledBookings = (adminBookings || []).filter((b: any) => b.status === "cancelled").length;
     const canceledTours = (adminTours || []).filter((t: any) => t.status === "canceled").length;
+    const activeTours = (adminTours || []).filter((t: any) => t.status === "published").length;
     return {
       totalRevenue,
       activeBookings,
       cancelledBookings,
       totalTours: adminTours?.length || 0,
+      activeTours,
       totalBookings: adminBookings?.length || 0,
       canceledTours,
     };
   }, [adminBookings, adminTours]);
 
-  const guestsByTourDate = useMemo(() => {
+  const guestsByTour = useMemo(() => {
     const out: Record<string, number> = {};
     (adminBookings || []).forEach((b: any) => {
       if (b.status === "cancelled") return;
@@ -139,17 +147,14 @@ const AdminDashboard = () => {
 
   const soldOutAlerts = useMemo(() => {
     const capacityByTour = Object.fromEntries((adminTours || []).map((t: any) => [t.id, Number(t.max_total_slots || 0)]));
-    const keyStats: Record<string, { tourId: string; tourTitle: string; startDate: string; booked: number; capacity: number }> = {};
-    (adminBookings || []).forEach((b: any) => {
-      if (b.status === "cancelled") return;
-      const key = `${b.tour_id}__${b.start_date}`;
-      if (!keyStats[key]) {
-        keyStats[key] = { tourId: b.tour_id, tourTitle: b.tours?.title || "Tour", startDate: b.start_date, booked: 0, capacity: capacityByTour[b.tour_id] || 0 };
-      }
-      keyStats[key].booked += Number(b.guests_count || 0);
-    });
-    return Object.values(keyStats).filter((i) => i.capacity > 0 && i.booked >= i.capacity);
-  }, [adminBookings, adminTours]);
+    return (adminTours || [])
+      .filter((t: any) => {
+        const booked = guestsByTour[t.id] || 0;
+        const cap = capacityByTour[t.id] || 0;
+        return cap > 0 && booked >= cap;
+      })
+      .map((t: any) => ({ tourId: t.id, tourTitle: t.title, booked: guestsByTour[t.id] || 0, capacity: capacityByTour[t.id] || 0 }));
+  }, [adminTours, guestsByTour]);
 
   const filteredBookings = useMemo(() => {
     let list = adminBookings || [];
@@ -162,11 +167,34 @@ const AdminDashboard = () => {
         (b.bookedByProfile?.full_name || "").toLowerCase().includes(q) ||
         (b.bookedByProfile?.email || "").toLowerCase().includes(q) ||
         (b.tours?.title || "").toLowerCase().includes(q) ||
-        b.id.toLowerCase().includes(q)
+        (b.phone_number || "").includes(q)
       );
     }
     return list;
   }, [adminBookings, bookingStatusFilter, bookingSearch]);
+
+  const exportBookingsCSV = useCallback(() => {
+    const rows = filteredBookings.map((b: any) => ({
+      "Customer": b.bookedByProfile?.full_name || "Unknown",
+      "Email": b.bookedByProfile?.email || "",
+      "Phone": b.phone_number || b.bookedByProfile?.phone || "",
+      "Tour": b.tours?.title || "",
+      "Category": b.tours?.category || "",
+      "Guests": b.guests_count,
+      "Total": b.total_price,
+      "Start Date": b.start_date,
+      "Status": b.status,
+      "Booked": new Date(b.created_at).toLocaleDateString(),
+    }));
+    const headers = Object.keys(rows[0] || {});
+    const csv = [headers.join(","), ...rows.map((r: any) => headers.map((h) => `"${String(r[h]).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `bookings-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported");
+  }, [filteredBookings]);
 
   /* ── Mutations ── */
   const toggleStatus = useMutation({
@@ -192,7 +220,6 @@ const AdminDashboard = () => {
 
   const deleteTour = useMutation({
     mutationFn: async (tourId: string) => {
-      // Check for active bookings
       const active = activeBookingCountByTour[tourId] || 0;
       if (active > 0) throw new Error(`Cannot delete: ${active} active booking(s) exist. Cancel or complete them first.`);
       const { error } = await supabase.from("tours").delete().eq("id", tourId);
@@ -224,7 +251,6 @@ const AdminDashboard = () => {
         .eq("id", booking.id);
       if (error) throw error;
 
-      // Send cancellation email fire-and-forget
       supabase.functions.invoke("send-booking-email", {
         body: {
           to_email: booking.bookedByProfile?.email || "",
@@ -271,25 +297,26 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <StatCard icon={DollarSign} label="Revenue (Paid)" value={`$${stats.totalRevenue.toLocaleString()}`} />
           <StatCard icon={Globe} label="Total Tours" value={String(stats.totalTours)} />
+          <StatCard icon={Eye} label="Active Tours" value={String(stats.activeTours)} />
           <StatCard icon={Users} label="Total Bookings" value={String(stats.totalBookings)} />
           <StatCard icon={Users} label="Active Bookings" value={String(stats.activeBookings)} />
-          <StatCard icon={Ban} label="Cancelled Bookings" value={String(stats.cancelledBookings)} />
-          <StatCard icon={DollarSign} label="Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} />
-          <StatCard icon={AlertTriangle} label="Sold Out Dates" value={String(soldOutAlerts.length)} />
+          <StatCard icon={Ban} label="Cancelled" value={String(stats.cancelledBookings)} />
+          <StatCard icon={AlertTriangle} label="Sold Out" value={String(soldOutAlerts.length)} />
         </div>
 
         {soldOutAlerts.length > 0 && (
           <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <p className="font-medium text-destructive">Capacity Alerts</p>
+              <p className="font-medium text-destructive">Capacity Alerts — Sold Out Tours</p>
             </div>
             <div className="space-y-1 text-sm">
               {soldOutAlerts.map((a) => (
-                <p key={`${a.tourId}-${a.startDate}`}>
-                  <strong>{a.tourTitle}</strong> on {new Date(a.startDate).toLocaleDateString()} — {a.booked}/{a.capacity} booked (SOLD OUT)
+                <p key={a.tourId}>
+                  <strong>{a.tourTitle}</strong> — {a.booked}/{a.capacity} booked 🔴
                 </p>
               ))}
             </div>
@@ -299,47 +326,58 @@ const AdminDashboard = () => {
         <Tabs defaultValue="tours" className="space-y-6">
           <TabsList>
             <TabsTrigger value="tours">Tour Management</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="bookings">Bookings CRM</TabsTrigger>
           </TabsList>
 
           {/* ── TOURS TAB ── */}
           <TabsContent value="tours" className="space-y-4">
             {toursLoading ? (
               <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
-            ) : (
+            ) : adminTours && adminTours.length > 0 ? (
               <div className="space-y-3">
-                {adminTours?.map((tour: any) => {
-                  const bookedGuests = guestsByTourDate[tour.id] || 0;
+                {adminTours.map((tour: any) => {
+                  const bookedGuests = guestsByTour[tour.id] || 0;
                   const capacity = Number(tour.max_total_slots || 0);
                   const capacityPct = capacity > 0 ? Math.min((bookedGuests / capacity) * 100, 100) : 0;
                   const isCanceled = tour.status === "canceled";
                   const activeCount = activeBookingCountByTour[tour.id] || 0;
+                  const isSoldOut = capacity > 0 && bookedGuests >= capacity;
 
                   return (
                     <div key={tour.id} className={`rounded-xl border border-border bg-card p-4 space-y-3 ${isCanceled ? "opacity-60" : ""}`}>
                       <div className="flex items-center gap-4">
                         <img
-                          src={tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=100&h=100&fit=crop"}
+                          src={tour.tour_images?.[0]?.image_url || tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=100&h=100&fit=crop"}
                           alt={tour.title}
                           className="h-14 w-14 rounded-lg object-cover shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=100&h=100&fit=crop"; }}
                         />
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold truncate">{tour.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            {tour.destinations?.name} • ${Number(tour.price_per_person).toLocaleString()}/person • {tour.duration_days} days
+                            {tour.destinations?.name || "No destination"} • ${Number(tour.price_per_person).toLocaleString()}/person • {tour.duration_days} days
                           </p>
                         </div>
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${
-                          tour.status === "published" ? "bg-primary/10 text-primary"
-                          : tour.status === "canceled" ? "bg-destructive/10 text-destructive"
-                          : tour.status === "completed" ? "bg-accent/10 text-accent"
-                          : "bg-muted text-muted-foreground"
-                        }`}>
-                          {tour.status}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground capitalize">
+                            {tour.category || "safari"}
+                          </span>
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            tour.status === "published" ? "bg-primary/10 text-primary"
+                            : tour.status === "canceled" ? "bg-destructive/10 text-destructive"
+                            : tour.status === "completed" ? "bg-accent/10 text-accent"
+                            : "bg-muted text-muted-foreground"
+                          }`}>
+                            {tour.status}
+                          </span>
+                          {isSoldOut && (
+                            <span className="rounded-full bg-destructive px-2.5 py-0.5 text-xs font-bold text-destructive-foreground">
+                              SOLD OUT
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Capacity bar */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Capacity: {bookedGuests} / {capacity} guests booked • {activeCount} booking(s)</span>
@@ -348,7 +386,6 @@ const AdminDashboard = () => {
                         <Progress value={capacityPct} className="h-2" />
                       </div>
 
-                      {/* Actions row */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <div className="flex items-center gap-1">
                           <Input
@@ -383,12 +420,7 @@ const AdminDashboard = () => {
                           </Button>
                         )}
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={() => setEditingTour(tour)}
-                        >
+                        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setEditingTour(tour)}>
                           <Edit className="mr-1 h-3 w-3" /> Edit
                         </Button>
 
@@ -419,17 +451,23 @@ const AdminDashboard = () => {
                   );
                 })}
               </div>
+            ) : (
+              <div className="py-16 text-center">
+                <Globe className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-lg font-medium mb-1">No tours yet</p>
+                <p className="text-muted-foreground">Create your first tour to get started.</p>
+              </div>
             )}
           </TabsContent>
 
           {/* ── BOOKINGS TAB ── */}
           <TabsContent value="bookings" className="space-y-4">
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-9"
-                  placeholder="Search by name, email, or tour..."
+                  placeholder="Search by name, email, phone, or tour..."
                   value={bookingSearch}
                   onChange={(e) => setBookingSearch(e.target.value)}
                 />
@@ -445,39 +483,49 @@ const AdminDashboard = () => {
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
+              <Button variant="outline" size="sm" onClick={exportBookingsCSV} disabled={filteredBookings.length === 0}>
+                <Download className="mr-1 h-4 w-4" /> Export CSV
+              </Button>
             </div>
+
+            <p className="text-sm text-muted-foreground">{filteredBookings.length} booking{filteredBookings.length !== 1 ? "s" : ""}</p>
 
             {bookingsLoading ? (
               <Skeleton className="h-56 rounded-xl" />
             ) : (
               <div className="rounded-xl border border-border bg-card overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-sm">
+                <table className="w-full min-w-[1200px] text-sm">
                   <thead className="bg-muted/50">
                     <tr className="text-left">
-                      <th className="px-4 py-3">Customer</th>
-                      <th className="px-4 py-3">Email</th>
-                      <th className="px-4 py-3">Phone</th>
-                      <th className="px-4 py-3">Tour</th>
-                      <th className="px-4 py-3">Guests</th>
-                      <th className="px-4 py-3">Start</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Total</th>
-                      <th className="px-4 py-3">Cancelled By</th>
-                      <th className="px-4 py-3">Booked</th>
-                      <th className="px-4 py-3">Actions</th>
+                      <th className="px-4 py-3 font-medium">Customer</th>
+                      <th className="px-4 py-3 font-medium">Email</th>
+                      <th className="px-4 py-3 font-medium">Phone</th>
+                      <th className="px-4 py-3 font-medium">Tour</th>
+                      <th className="px-4 py-3 font-medium">Category</th>
+                      <th className="px-4 py-3 font-medium">Guests</th>
+                      <th className="px-4 py-3 font-medium">Total</th>
+                      <th className="px-4 py-3 font-medium">Start</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Cancelled By</th>
+                      <th className="px-4 py-3 font-medium">Booked</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredBookings.map((b: any) => (
-                      <tr key={b.id} className="border-t border-border align-top">
+                      <tr key={b.id} className="border-t border-border align-top hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 font-medium">{b.bookedByProfile?.full_name || "Unknown"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{b.bookedByProfile?.email || "—"}</td>
-                        <td className="px-4 py-3">
-                          {b.phone_number || b.bookedByProfile?.phone || "—"}
-                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">{b.bookedByProfile?.email || "—"}</td>
+                        <td className="px-4 py-3 text-xs">{b.phone_number || b.bookedByProfile?.phone || "—"}</td>
                         <td className="px-4 py-3">{b.tours?.title || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground capitalize">
+                            {b.tours?.category || "safari"}
+                          </span>
+                        </td>
                         <td className="px-4 py-3">{b.guests_count}</td>
-                        <td className="px-4 py-3">{new Date(b.start_date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 font-medium">${Number(b.total_price).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-xs">{new Date(b.start_date).toLocaleDateString()}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                             b.status === "paid" ? "bg-primary/10 text-primary"
@@ -487,7 +535,6 @@ const AdminDashboard = () => {
                             {b.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3">${Number(b.total_price).toLocaleString()}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {b.status === "cancelled" ? (
                             <div>
@@ -515,7 +562,7 @@ const AdminDashboard = () => {
                     ))}
                     {filteredBookings.length === 0 && (
                       <tr>
-                        <td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">No bookings found</td>
+                        <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">No bookings found</td>
                       </tr>
                     )}
                   </tbody>
@@ -616,7 +663,7 @@ const StatCard = ({ icon: Icon, label, value }: { icon: any; label: string; valu
       <div className="rounded-xl bg-primary/10 p-2">
         <Icon className="h-5 w-5 text-primary" />
       </div>
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
     </div>
     <p className="text-2xl font-bold text-foreground">{value}</p>
   </div>
@@ -627,6 +674,7 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [destSearch, setDestSearch] = useState("");
   const [form, setForm] = useState({
     title: "", description: "", destination_id: "none",
     destination_name: "", destination_country: "",
@@ -634,15 +682,24 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
     duration_days: "3", difficulty: "Easy" as "Easy" | "Medium" | "Hard",
     max_group_size: "10", max_total_slots: "50",
     image_url: "", highlights: "", included: "", excluded: "",
+    category: "safari",
   });
 
-  const resetForm = () => setForm({
-    title: "", description: "", destination_id: "none",
-    destination_name: "", destination_country: "",
-    whatsapp_group_link: "", price_per_person: "", discount_price: "",
-    duration_days: "3", difficulty: "Easy", max_group_size: "10",
-    max_total_slots: "50", image_url: "", highlights: "", included: "", excluded: "",
-  });
+  const resetForm = () => {
+    setForm({
+      title: "", description: "", destination_id: "none",
+      destination_name: "", destination_country: "",
+      whatsapp_group_link: "", price_per_person: "", discount_price: "",
+      duration_days: "3", difficulty: "Easy", max_group_size: "10",
+      max_total_slots: "50", image_url: "", highlights: "", included: "", excluded: "",
+      category: "safari",
+    });
+    setDestSearch("");
+  };
+
+  const filteredDests = destSearch.trim()
+    ? destinations.filter((d) => `${d.name} ${d.country}`.toLowerCase().includes(destSearch.toLowerCase()))
+    : destinations;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -684,6 +741,7 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
         highlights: form.highlights.split(",").map((s) => s.trim()).filter(Boolean),
         included: form.included.split(",").map((s) => s.trim()).filter(Boolean),
         excluded: form.excluded.split(",").map((s) => s.trim()).filter(Boolean),
+        category: form.category,
         status: "draft",
       });
       if (error) throw error;
@@ -705,25 +763,45 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Tour</DialogTitle>
-          <DialogDescription>Create a tour with destination, capacity, and optional WhatsApp group link.</DialogDescription>
+          <DialogDescription>Create a tour with destination, capacity, category, and optional WhatsApp group link.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5"><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
           <div className="space-y-1.5"><Label>Description</Label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" rows={3} />
           </div>
-          <div className="space-y-1.5"><Label>Existing Destination</Label>
+
+          {/* Category */}
+          <div className="space-y-1.5">
+            <Label>Category *</Label>
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Searchable Destination */}
+          <div className="space-y-1.5">
+            <Label>Existing Destination</Label>
+            <Input
+              placeholder="Search destinations..."
+              value={destSearch}
+              onChange={(e) => setDestSearch(e.target.value)}
+              className="mb-1"
+            />
             <Select value={form.destination_id} onValueChange={(v) => setForm({ ...form, destination_id: v })}>
               <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None — type manually</SelectItem>
-                {destinations.map((d) => <SelectItem key={d.id} value={d.id}>{d.name} ({d.country})</SelectItem>)}
+                <SelectItem value="none">None — type manually below</SelectItem>
+                {filteredDests.map((d) => <SelectItem key={d.id} value={d.id}>{d.name} ({d.country})</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label>Manual Destination</Label><Input value={form.destination_name} onChange={(e) => setForm({ ...form, destination_name: e.target.value })} placeholder="Serengeti" /></div>
-            <div className="space-y-1.5"><Label>Country</Label><Input value={form.destination_country} onChange={(e) => setForm({ ...form, destination_country: e.target.value })} placeholder="Tanzania" /></div>
+            <div className="space-y-1.5"><Label>New Destination</Label><Input value={form.destination_name} onChange={(e) => setForm({ ...form, destination_name: e.target.value })} placeholder="e.g. Serengeti" /></div>
+            <div className="space-y-1.5"><Label>Country</Label><Input value={form.destination_country} onChange={(e) => setForm({ ...form, destination_country: e.target.value })} placeholder="e.g. Tanzania" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label>Price/person *</Label><Input type="number" min="0" value={form.price_per_person} onChange={(e) => setForm({ ...form, price_per_person: e.target.value })} required /></div>
@@ -741,7 +819,7 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5"><Label>Max Group Size</Label><Input type="number" min="1" value={form.max_group_size} onChange={(e) => setForm({ ...form, max_group_size: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>Max Group</Label><Input type="number" min="1" value={form.max_group_size} onChange={(e) => setForm({ ...form, max_group_size: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label>Max Total Slots</Label><Input type="number" min="1" value={form.max_total_slots} onChange={(e) => setForm({ ...form, max_total_slots: e.target.value })} /></div>
@@ -779,6 +857,7 @@ const EditTourDialog = ({ tour, destinations, onClose }: { tour: any; destinatio
     highlights: (tour.highlights || []).join(", "),
     included: (tour.included || []).join(", "),
     excluded: (tour.excluded || []).join(", "),
+    category: tour.category || "safari",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -801,6 +880,7 @@ const EditTourDialog = ({ tour, destinations, onClose }: { tour: any; destinatio
         highlights: form.highlights.split(",").map((s) => s.trim()).filter(Boolean),
         included: form.included.split(",").map((s) => s.trim()).filter(Boolean),
         excluded: form.excluded.split(",").map((s) => s.trim()).filter(Boolean),
+        category: form.category,
       }).eq("id", tour.id);
       if (error) throw error;
       toast.success("Tour updated");
@@ -815,12 +895,21 @@ const EditTourDialog = ({ tour, destinations, onClose }: { tour: any; destinatio
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Tour</DialogTitle>
-          <DialogDescription>Update tour details, pricing, and capacity.</DialogDescription>
+          <DialogDescription>Update tour details, pricing, category, and capacity.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5"><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
           <div className="space-y-1.5"><Label>Description</Label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" rows={3} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5"><Label>Destination</Label>
             <Select value={form.destination_id} onValueChange={(v) => setForm({ ...form, destination_id: v })}>
@@ -872,6 +961,7 @@ const ManageImagesDialog = ({ tour }: { tour: any }) => {
   const [open, setOpen] = useState(false);
   const [newUrl, setNewUrl] = useState("");
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const images = (tour.tour_images || []).sort((a: any, b: any) => a.display_order - b.display_order);
 
@@ -895,6 +985,37 @@ const ManageImagesDialog = ({ tour }: { tour: any }) => {
     setAdding(false);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
+
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${tour.id}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage.from("tour-images").upload(path, file);
+    if (uploadError) { toast.error("Upload failed: " + uploadError.message); setUploading(false); return; }
+
+    const { data: urlData } = supabase.storage.from("tour-images").getPublicUrl(path);
+    const publicUrl = urlData.publicUrl;
+
+    const { error: insertError } = await supabase.from("tour_images").insert({
+      tour_id: tour.id,
+      image_url: publicUrl,
+      display_order: images.length,
+    });
+
+    if (insertError) toast.error("Failed to save image record");
+    else {
+      toast.success("Image uploaded");
+      queryClient.invalidateQueries({ queryKey: ["admin-tours"] });
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
   const removeImage = async (imageId: string) => {
     const { error } = await supabase.from("tour_images").delete().eq("id", imageId);
     if (error) toast.error("Failed to remove image");
@@ -908,20 +1029,31 @@ const ManageImagesDialog = ({ tour }: { tour: any }) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 text-xs">
-          <Image className="mr-1 h-3 w-3" /> Images ({images.length})
+          <ImageIcon className="mr-1 h-3 w-3" /> Images ({images.length})
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Tour Gallery — {tour.title}</DialogTitle>
-          <DialogDescription>Add or remove tour images. Images display in order added.</DialogDescription>
+          <DialogDescription>Upload or add tour images by URL. Images display in order added.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* File upload */}
+          <div className="space-y-2">
+            <Label>Upload Image</Label>
+            <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+              {uploading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : <Upload className="h-5 w-5 text-muted-foreground" />}
+              <span className="text-sm text-muted-foreground">{uploading ? "Uploading..." : "Click to upload (max 5MB)"}</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+            </label>
+          </div>
+
+          {/* URL input */}
           <div className="flex gap-2">
             <Input
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
-              placeholder="https://image-url..."
+              placeholder="Or paste image URL..."
               className="flex-1"
             />
             <Button onClick={addImage} disabled={adding} size="sm">
@@ -933,7 +1065,12 @@ const ManageImagesDialog = ({ tour }: { tour: any }) => {
             <div className="grid grid-cols-3 gap-2">
               {images.map((img: any) => (
                 <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-square">
-                  <img src={img.image_url} alt="Tour" className="h-full w-full object-cover" />
+                  <img
+                    src={img.image_url}
+                    alt="Tour"
+                    className="h-full w-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=200&h=200&fit=crop"; }}
+                  />
                   <button
                     onClick={() => removeImage(img.id)}
                     className="absolute top-1 right-1 rounded-full bg-destructive/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -944,7 +1081,7 @@ const ManageImagesDialog = ({ tour }: { tour: any }) => {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">No gallery images yet. The tour's main image will be used.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No gallery images yet. Upload or paste a URL above.</p>
           )}
         </div>
       </DialogContent>
