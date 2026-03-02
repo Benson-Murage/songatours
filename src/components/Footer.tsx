@@ -52,8 +52,8 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4">Support</h4>
             <div className="flex flex-col gap-2.5">
-              <span className="text-sm text-muted-foreground">info@songatravel.com</span>
-              <span className="text-sm text-muted-foreground">+254 700 000 000</span>
+              <span className="text-sm text-muted-foreground">salmajeods11@gmail.com</span>
+              <span className="text-sm text-muted-foreground">+254 796 102 412</span>
               <span className="text-sm text-muted-foreground">Nairobi, Kenya</span>
             </div>
           </div>
