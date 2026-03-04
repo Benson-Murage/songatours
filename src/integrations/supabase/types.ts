@@ -77,6 +77,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          is_trending: boolean
           name: string
           slug: string
         }
@@ -86,6 +87,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_trending?: boolean
           name: string
           slug: string
         }
@@ -95,6 +97,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_trending?: boolean
           name?: string
           slug?: string
         }
@@ -234,8 +237,10 @@ export type Database = {
       }
       tours: {
         Row: {
+          allow_custom_dates: boolean
           category: string
           created_at: string
+          departure_date: string | null
           description: string | null
           destination_id: string | null
           difficulty: Database["public"]["Enums"]["tour_difficulty"]
@@ -246,6 +251,7 @@ export type Database = {
           id: string
           image_url: string | null
           included: string[] | null
+          is_fixed_date: boolean
           max_group_size: number
           max_total_slots: number
           price_per_person: number
@@ -256,8 +262,10 @@ export type Database = {
           whatsapp_group_link: string | null
         }
         Insert: {
+          allow_custom_dates?: boolean
           category?: string
           created_at?: string
+          departure_date?: string | null
           description?: string | null
           destination_id?: string | null
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
@@ -268,6 +276,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           included?: string[] | null
+          is_fixed_date?: boolean
           max_group_size?: number
           max_total_slots?: number
           price_per_person?: number
@@ -278,8 +287,10 @@ export type Database = {
           whatsapp_group_link?: string | null
         }
         Update: {
+          allow_custom_dates?: boolean
           category?: string
           created_at?: string
+          departure_date?: string | null
           description?: string | null
           destination_id?: string | null
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
@@ -290,6 +301,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           included?: string[] | null
+          is_fixed_date?: boolean
           max_group_size?: number
           max_total_slots?: number
           price_per_person?: number

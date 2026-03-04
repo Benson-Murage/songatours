@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
-  Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download,
+  Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download, QrCode, CalendarDays,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { format } from "date-fns";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -243,6 +249,28 @@ const AdminDashboard = () => {
     onError: () => toast.error("Failed to update capacity"),
   });
 
+  const toggleFixedDate = useMutation({
+    mutationFn: async ({ tourId, isFixed, date }: { tourId: string; isFixed: boolean; date: string | null }) => {
+      const { error } = await supabase.from("tours").update({
+        is_fixed_date: isFixed,
+        departure_date: date,
+        allow_custom_dates: !isFixed,
+      } as any).eq("id", tourId);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Date mode updated"); queryClient.invalidateQueries({ queryKey: ["admin-tours"] }); },
+    onError: () => toast.error("Failed to update date mode"),
+  });
+
+  const toggleTrending = useMutation({
+    mutationFn: async ({ destId, trending }: { destId: string; trending: boolean }) => {
+      const { error } = await supabase.from("destinations").update({ is_trending: trending } as any).eq("id", destId);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Trending status updated"); queryClient.invalidateQueries({ queryKey: ["destinations"] }); queryClient.invalidateQueries({ queryKey: ["trending-destinations"] }); },
+    onError: () => toast.error("Failed to update"),
+  });
+
   const cancelBookingMut = useMutation({
     mutationFn: async (booking: any) => {
       const { error } = await supabase
@@ -327,6 +355,7 @@ const AdminDashboard = () => {
           <TabsList>
             <TabsTrigger value="tours">Tour Management</TabsTrigger>
             <TabsTrigger value="bookings">Bookings CRM</TabsTrigger>
+            <TabsTrigger value="destinations">Destinations</TabsTrigger>
           </TabsList>
 
           {/* ── TOURS TAB ── */}
@@ -357,8 +386,14 @@ const AdminDashboard = () => {
                           <p className="text-xs text-muted-foreground">
                             {tour.destinations?.name || "No destination"} • ${Number(tour.price_per_person).toLocaleString()}/person • {tour.duration_days} days
                           </p>
+                          {tour.is_fixed_date && tour.departure_date && (
+                            <p className="text-xs text-primary font-medium mt-0.5">
+                              <CalendarDays className="inline h-3 w-3 mr-1" />
+                              Fixed: {format(new Date(tour.departure_date), "MMM d, yyyy")}
+                            </p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0 flex-wrap">
                           <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground capitalize">
                             {tour.category || "safari"}
                           </span>
@@ -409,6 +444,8 @@ const AdminDashboard = () => {
                           </Button>
                         </div>
 
+                        <FixedDateToggle tour={tour} onToggle={toggleFixedDate.mutate} />
+
                         {!isCanceled && tour.status !== "completed" && (
                           <Button
                             variant="ghost"
@@ -425,6 +462,8 @@ const AdminDashboard = () => {
                         </Button>
 
                         <ManageImagesDialog tour={tour} />
+
+                        <TourQRCode tour={tour} />
 
                         {!isCanceled && (
                           <Button
@@ -570,6 +609,40 @@ const AdminDashboard = () => {
               </div>
             )}
           </TabsContent>
+
+          {/* ── DESTINATIONS TAB ── */}
+          <TabsContent value="destinations" className="space-y-4">
+            <p className="text-sm text-muted-foreground">Toggle trending status for destinations shown on the homepage.</p>
+            {destinations && destinations.length > 0 ? (
+              <div className="space-y-2">
+                {destinations.map((d: any) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={d.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=60&h=60&fit=crop"}
+                        alt={d.name}
+                        className="h-10 w-10 rounded-lg object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=60&h=60&fit=crop"; }}
+                      />
+                      <div>
+                        <p className="font-medium">{d.name}</p>
+                        <p className="text-xs text-muted-foreground">{d.country}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Trending</span>
+                      <Switch
+                        checked={!!d.is_trending}
+                        onCheckedChange={(checked) => toggleTrending.mutate({ destId: d.id, trending: checked })}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No destinations yet.</p>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -669,6 +742,122 @@ const StatCard = ({ icon: Icon, label, value }: { icon: any; label: string; valu
   </div>
 );
 
+/* ─── Fixed Date Toggle ───────────────────────────────────────────── */
+const FixedDateToggle = ({ tour, onToggle }: { tour: any; onToggle: (args: { tourId: string; isFixed: boolean; date: string | null }) => void }) => {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const currentDate = tour.departure_date ? new Date(tour.departure_date + "T00:00:00") : undefined;
+
+  if (tour.is_fixed_date) {
+    return (
+      <div className="flex items-center gap-1">
+        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => onToggle({ tourId: tour.id, isFixed: false, date: null })}>
+          <CalendarDays className="mr-1 h-3 w-3" /> Make Flexible
+        </Button>
+        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 text-xs">
+              Change Date
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={currentDate}
+              onSelect={(d) => {
+                if (d) {
+                  onToggle({ tourId: tour.id, isFixed: true, date: d.toISOString().split("T")[0] });
+                  setDatePickerOpen(false);
+                }
+              }}
+              disabled={(date) => date < new Date(new Date().toDateString())}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
+
+  return (
+    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 text-xs">
+          <CalendarDays className="mr-1 h-3 w-3" /> Set Fixed Date
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={currentDate}
+          onSelect={(d) => {
+            if (d) {
+              onToggle({ tourId: tour.id, isFixed: true, date: d.toISOString().split("T")[0] });
+              setDatePickerOpen(false);
+            }
+          }}
+          disabled={(date) => date < new Date(new Date().toDateString())}
+          initialFocus
+          className={cn("p-3 pointer-events-auto")}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+/* ─── Tour QR Code ─────────────────────────────────────────────────── */
+const TourQRCode = ({ tour }: { tour: any }) => {
+  const [open, setOpen] = useState(false);
+  const qrRef = useRef<HTMLDivElement>(null);
+  const tourUrl = `${window.location.origin}/tours/${tour.id}`;
+
+  const downloadQR = () => {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext("2d")!;
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, 1024, 1024);
+      ctx.drawImage(img, 0, 0, 1024, 1024);
+      const a = document.createElement("a");
+      a.download = `qr-${tour.slug || tour.id}.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 text-xs">
+          <QrCode className="mr-1 h-3 w-3" /> QR
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>QR Code — {tour.title}</DialogTitle>
+          <DialogDescription>Scan to view tour page. Download for print marketing.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col items-center gap-4 py-4">
+          <div ref={qrRef} className="rounded-xl border border-border p-4 bg-card">
+            <QRCodeSVG value={tourUrl} size={256} level="H" includeMargin fgColor="#1a1a1a" bgColor="#ffffff" />
+          </div>
+          <p className="text-xs text-muted-foreground text-center break-all">{tourUrl}</p>
+          <Button variant="accent" onClick={downloadQR} className="w-full">
+            <Download className="mr-2 h-4 w-4" /> Download QR Code
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 /* ─── Create Tour Dialog ──────────────────────────────────────────── */
 const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
   const queryClient = useQueryClient();
@@ -683,6 +872,7 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
     max_group_size: "10", max_total_slots: "50",
     image_url: "", highlights: "", included: "", excluded: "",
     category: "safari",
+    is_fixed_date: false, departure_date: "",
   });
 
   const resetForm = () => {
@@ -693,6 +883,7 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
       duration_days: "3", difficulty: "Easy", max_group_size: "10",
       max_total_slots: "50", image_url: "", highlights: "", included: "", excluded: "",
       category: "safari",
+      is_fixed_date: false, departure_date: "",
     });
     setDestSearch("");
   };
@@ -714,6 +905,9 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
     }
     if (form.whatsapp_group_link && !/^https?:\/\//i.test(form.whatsapp_group_link.trim())) {
       toast.error("WhatsApp link must start with http:// or https://"); return;
+    }
+    if (form.is_fixed_date && !form.departure_date) {
+      toast.error("Set a departure date for fixed-date tours"); return;
     }
 
     setSubmitting(true);
@@ -743,7 +937,10 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
         excluded: form.excluded.split(",").map((s) => s.trim()).filter(Boolean),
         category: form.category,
         status: "draft",
-      });
+        is_fixed_date: form.is_fixed_date,
+        departure_date: form.is_fixed_date && form.departure_date ? form.departure_date : null,
+        allow_custom_dates: !form.is_fixed_date,
+      } as any);
       if (error) throw error;
 
       toast.success("Tour created as draft");
@@ -781,6 +978,23 @@ const CreateTourDialog = ({ destinations }: { destinations: any[] }) => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Fixed Date Toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-border p-3">
+            <div>
+              <Label className="text-sm">Fixed Departure Date</Label>
+              <p className="text-xs text-muted-foreground">Enable for tours with a specific departure date</p>
+            </div>
+            <Switch checked={form.is_fixed_date} onCheckedChange={(v) => setForm({ ...form, is_fixed_date: v })} />
+          </div>
+          {form.is_fixed_date && (
+            <div className="space-y-1.5">
+              <Label>Departure Date *</Label>
+              <Input type="date" value={form.departure_date}
+                onChange={(e) => setForm({ ...form, departure_date: e.target.value })}
+                min={new Date().toISOString().split("T")[0]} />
+            </div>
+          )}
 
           {/* Searchable Destination */}
           <div className="space-y-1.5">
@@ -858,11 +1072,14 @@ const EditTourDialog = ({ tour, destinations, onClose }: { tour: any; destinatio
     included: (tour.included || []).join(", "),
     excluded: (tour.excluded || []).join(", "),
     category: tour.category || "safari",
+    is_fixed_date: !!tour.is_fixed_date,
+    departure_date: tour.departure_date || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.price_per_person) { toast.error("Fill required fields"); return; }
+    if (form.is_fixed_date && !form.departure_date) { toast.error("Set a departure date"); return; }
     setSubmitting(true);
     try {
       const { error } = await supabase.from("tours").update({
@@ -881,7 +1098,10 @@ const EditTourDialog = ({ tour, destinations, onClose }: { tour: any; destinatio
         included: form.included.split(",").map((s) => s.trim()).filter(Boolean),
         excluded: form.excluded.split(",").map((s) => s.trim()).filter(Boolean),
         category: form.category,
-      }).eq("id", tour.id);
+        is_fixed_date: form.is_fixed_date,
+        departure_date: form.is_fixed_date && form.departure_date ? form.departure_date : null,
+        allow_custom_dates: !form.is_fixed_date,
+      } as any).eq("id", tour.id);
       if (error) throw error;
       toast.success("Tour updated");
       queryClient.invalidateQueries({ queryKey: ["admin-tours"] });
@@ -911,6 +1131,24 @@ const EditTourDialog = ({ tour, destinations, onClose }: { tour: any; destinatio
               </SelectContent>
             </Select>
           </div>
+
+          {/* Fixed Date Toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-border p-3">
+            <div>
+              <Label className="text-sm">Fixed Departure Date</Label>
+              <p className="text-xs text-muted-foreground">Lock this tour to a specific date</p>
+            </div>
+            <Switch checked={form.is_fixed_date} onCheckedChange={(v) => setForm({ ...form, is_fixed_date: v })} />
+          </div>
+          {form.is_fixed_date && (
+            <div className="space-y-1.5">
+              <Label>Departure Date *</Label>
+              <Input type="date" value={form.departure_date}
+                onChange={(e) => setForm({ ...form, departure_date: e.target.value })}
+                min={new Date().toISOString().split("T")[0]} />
+            </div>
+          )}
+
           <div className="space-y-1.5"><Label>Destination</Label>
             <Select value={form.destination_id} onValueChange={(v) => setForm({ ...form, destination_id: v })}>
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>

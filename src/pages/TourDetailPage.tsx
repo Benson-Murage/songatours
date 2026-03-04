@@ -3,7 +3,9 @@ import { useState } from "react";
 import {
   MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, Loader2,
   CheckCircle2, Heart, ShieldCheck, Phone, XCircle, AlertTriangle, MessageCircle,
+  CalendarDays,
 } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +16,9 @@ import { Progress } from "@/components/ui/progress";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useTour, useReviews, useFavorites, useToggleFavorite, useTourCapacity } from "@/hooks/useTours";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +48,12 @@ const TourDetailPage = () => {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [whatsappModal, setWhatsappModal] = useState<string | null>(null);
 
-  const { data: capacity } = useTourCapacity(id!, startDate || undefined);
+  // For fixed-date tours, use departure_date automatically
+  const effectiveStartDate = tour?.is_fixed_date && tour?.departure_date
+    ? tour.departure_date
+    : startDate;
+
+  const { data: capacity } = useTourCapacity(id!, effectiveStartDate || undefined);
 
   const isFavorited = favorites?.includes(id!) ?? false;
   const avgRating = reviews?.length
@@ -79,6 +89,7 @@ const TourDetailPage = () => {
   const effectivePrice = hasDiscount ? Number(tour.discount_price) : Number(tour.price_per_person);
   const totalPrice = effectivePrice * guests;
   const destination = tour.destinations as { name: string; country: string } | null;
+  const isFixedDate = tour.is_fixed_date && !!tour.departure_date;
 
   const tourImages = (tour.tour_images || [])
     .sort((a, b) => a.display_order - b.display_order)
@@ -91,8 +102,9 @@ const TourDetailPage = () => {
 
   const validateBooking = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!startDate) newErrors.startDate = "Please select a start date";
-    else if (new Date(startDate) < new Date(new Date().toDateString())) newErrors.startDate = "Date must be in the future";
+    const bookingDate = isFixedDate ? tour.departure_date! : startDate;
+    if (!bookingDate) newErrors.startDate = "Please select a start date";
+    else if (new Date(bookingDate) < new Date(new Date().toDateString())) newErrors.startDate = "Date must be in the future";
     if (guests < 1) newErrors.guests = "At least 1 guest required";
     if (guests > tour.max_group_size) newErrors.guests = `Maximum ${tour.max_group_size} guests`;
     if (capacity && guests > capacity.remaining) newErrors.guests = `Only ${capacity.remaining} spot(s) left`;
@@ -112,10 +124,11 @@ const TourDetailPage = () => {
 
     setBooking(true);
     try {
+      const bookingDate = isFixedDate ? tour.departure_date! : startDate;
       const { data, error } = await supabase.functions.invoke("create-booking", {
         body: {
           tour_id: tour.id,
-          start_date: startDate,
+          start_date: bookingDate,
           guests_count: guests,
           phone_number: phoneNumber.trim(),
           special_requests: specialRequests.trim() || null,
@@ -169,6 +182,60 @@ const TourDetailPage = () => {
 
   const nextImage = () => setGalleryIndex((i) => (i + 1) % galleryImages.length);
   const prevImage = () => setGalleryIndex((i) => (i - 1 + galleryImages.length) % galleryImages.length);
+
+  const DateSelector = () => {
+    if (isFixedDate) {
+      return (
+        <div className="space-y-1.5">
+          <Label>Departure Date</Label>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-2.5">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">
+              {format(new Date(tour.departure_date!), "MMMM d, yyyy")}
+            </span>
+          </div>
+          <p className="text-xs text-primary font-medium">Fixed departure — date cannot be changed</p>
+        </div>
+      );
+    }
+
+    const selectedDate = startDate ? new Date(startDate + "T00:00:00") : undefined;
+
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor="startDate">Start Date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground", errors.startDate && "border-destructive")}
+            >
+              <CalendarDays className="mr-2 h-4 w-4" />
+              {startDate ? format(selectedDate!, "PPP") : "Pick a date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => {
+                if (d) {
+                  const iso = d.toISOString().split("T")[0];
+                  setStartDate(iso);
+                  setErrors((p) => ({ ...p, startDate: "" }));
+                }
+              }}
+              disabled={(date) => date < new Date(new Date().toDateString())}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+        {errors.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
+        <p className="text-xs text-muted-foreground">Flexible travel dates available</p>
+      </div>
+    );
+  };
 
   return (
     <Layout>
@@ -266,11 +333,26 @@ const TourDetailPage = () => {
                 )}
               </div>
 
+              {/* Fixed/Flexible date badge */}
+              <div className="mt-3">
+                {isFixedDate ? (
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                    <CalendarDays className="h-4 w-4" />
+                    Next Departure: {format(new Date(tour.departure_date!), "d MMMM yyyy")}
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
+                    <CalendarDays className="h-4 w-4" />
+                    Flexible Travel Dates Available
+                  </div>
+                )}
+              </div>
+
               {capacity && !isCanceled && (
                 <div className="mt-4 rounded-xl bg-secondary p-3">
                   <div className="flex items-center justify-between text-sm mb-1.5">
                     <span className="text-muted-foreground">
-                      {startDate ? `Availability for ${new Date(startDate).toLocaleDateString()}` : "Overall availability"}
+                      {effectiveStartDate ? `Availability for ${new Date(effectiveStartDate).toLocaleDateString()}` : "Overall availability"}
                     </span>
                     <span className={`font-medium ${soldOut ? "text-destructive" : "text-primary"}`}>
                       {soldOut ? "Sold Out" : `${capacity.remaining} spots left`}
@@ -444,14 +526,7 @@ const TourDetailPage = () => {
 
               {!isCanceled && !soldOut && (
                 <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="startDate">Start Date</Label>
-                    <Input id="startDate" type="date" value={startDate}
-                      onChange={(e) => { setStartDate(e.target.value); setErrors((p) => ({ ...p, startDate: "" })); }}
-                      min={new Date().toISOString().split("T")[0]}
-                      className={errors.startDate ? "border-destructive" : ""} />
-                    {errors.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
-                  </div>
+                  <DateSelector />
                   <div className="space-y-1.5">
                     <Label htmlFor="guests">Guests</Label>
                     <Input id="guests" type="number" min={1}
@@ -539,7 +614,11 @@ const TourDetailPage = () => {
                   <span className="text-xs text-muted-foreground">/ person</span>
                 </div>
               )}
-              <p className="text-[10px] text-muted-foreground">Free cancellation</p>
+              <p className="text-[10px] text-muted-foreground">
+                {isFixedDate
+                  ? `Departs ${format(new Date(tour.departure_date!), "MMM d")}`
+                  : "Free cancellation"}
+              </p>
             </div>
             <Button variant="accent" size="lg" onClick={handleBook} disabled={booking} className="shrink-0">
               {booking && <Loader2 className="h-4 w-4 animate-spin" />}
