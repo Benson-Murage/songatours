@@ -8,6 +8,7 @@ export interface Destination {
   description: string | null;
   image_url: string | null;
   slug: string;
+  is_trending: boolean;
 }
 
 export interface TourImage {
@@ -37,6 +38,9 @@ export interface Tour {
   whatsapp_group_link: string | null;
   category: string;
   status: "published" | "draft" | "canceled" | "completed";
+  is_fixed_date: boolean;
+  departure_date: string | null;
+  allow_custom_dates: boolean;
   destinations?: Destination | null;
   tour_images?: TourImage[];
 }
@@ -46,6 +50,19 @@ export const useDestinations = () =>
     queryKey: ["destinations"],
     queryFn: async () => {
       const { data, error } = await supabase.from("destinations").select("*");
+      if (error) throw error;
+      return data as Destination[];
+    },
+  });
+
+export const useTrendingDestinations = () =>
+  useQuery({
+    queryKey: ["trending-destinations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("destinations")
+        .select("*")
+        .eq("is_trending", true);
       if (error) throw error;
       return data as Destination[];
     },

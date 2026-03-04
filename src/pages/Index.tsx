@@ -3,7 +3,7 @@ import HeroSearch from "@/components/HeroSearch";
 import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
 import DestinationCard from "@/components/DestinationCard";
-import { useTours, useDestinations } from "@/hooks/useTours";
+import { useTours, useTrendingDestinations } from "@/hooks/useTours";
 import { ArrowRight, Car } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import heroImage from "@/assets/hero-safari.jpg";
 const Index = () => {
   const { data: tours, isLoading } = useTours();
   const { data: roadTrips } = useTours(undefined, "roadtrip");
-  const { data: destinations } = useDestinations();
+  const { data: trendingDestinations } = useTrendingDestinations();
 
   const dealTours = tours?.filter((t) => t.discount_price != null && t.discount_price < t.price_per_person) ?? [];
   const featuredTours = tours?.slice(0, 8) ?? [];
@@ -40,12 +40,12 @@ const Index = () => {
       </section>
 
       {/* Trending Destinations */}
-      {destinations && destinations.length > 0 && (
+      {trendingDestinations && trendingDestinations.length > 0 && (
         <section className="container mx-auto px-4 py-16">
           <div className="mb-8 flex items-end justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-foreground">Trending Destinations</h2>
-              <p className="mt-1 text-muted-foreground">Explore Africa's most sought-after locations</p>
+              <h2 className="text-3xl font-bold text-foreground">🔥 Trending Destinations</h2>
+              <p className="mt-1 text-muted-foreground">Most popular destinations right now</p>
             </div>
             <Link to="/destinations">
               <Button variant="ghost" size="sm" className="hidden sm:flex">
@@ -54,7 +54,7 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {destinations.map((dest) => <DestinationCard key={dest.id} destination={dest} />)}
+            {trendingDestinations.map((dest) => <DestinationCard key={dest.id} destination={dest} />)}
           </div>
         </section>
       )}

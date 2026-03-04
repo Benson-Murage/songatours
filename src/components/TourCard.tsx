@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { MapPin, Heart } from "lucide-react";
+import { MapPin, Heart, CalendarDays } from "lucide-react";
+import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites, useToggleFavorite } from "@/hooks/useTours";
 import type { Tour } from "@/hooks/useTours";
@@ -19,7 +20,6 @@ const TourCard = ({ tour }: TourCardProps) => {
   const isFavorited = favorites?.includes(tour.id) ?? false;
   const hasDiscount = tour.discount_price != null && tour.discount_price < tour.price_per_person;
 
-  // Use first gallery image, fall back to image_url, then placeholder
   const displayImage = tour.tour_images?.sort((a, b) => a.display_order - b.display_order)?.[0]?.image_url
     || tour.image_url
     || FALLBACK_IMG;
@@ -82,6 +82,15 @@ const TourCard = ({ tour }: TourCardProps) => {
           <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
             {tour.description}
           </p>
+
+          {/* Fixed date badge */}
+          {tour.is_fixed_date && tour.departure_date && (
+            <div className="mt-2 flex items-center gap-1 text-xs text-primary font-medium">
+              <CalendarDays className="h-3 w-3" />
+              Departs {format(new Date(tour.departure_date), "MMM d, yyyy")}
+            </div>
+          )}
+
           <div className="mt-3 flex items-end justify-between">
             <div>
               {hasDiscount ? (
