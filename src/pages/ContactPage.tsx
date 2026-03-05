@@ -14,8 +14,8 @@ const contactSchema = z.object({
 });
 
 const contactInfo = [
-  { icon: Mail, label: "Email", value: "info@songatravel.com" },
-  { icon: Phone, label: "Phone", value: "+254 700 000 000" },
+  { icon: Mail, label: "Email", value: "salmajeods11@gmail.com" },
+  { icon: Phone, label: "Phone", value: "+254 796 102 412" },
   { icon: MapPin, label: "Office", value: "Nairobi, Kenya" },
 ];
 
