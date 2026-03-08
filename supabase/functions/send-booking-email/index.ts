@@ -11,6 +11,10 @@ function jsonResponse(body: Record<string, unknown>, status: number) {
   });
 }
 
+function formatKES(amount: number): string {
+  return `KSh ${amount.toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
+}
+
 interface BookingEmailPayload {
   to_email: string;
   to_name: string;
@@ -71,17 +75,18 @@ Deno.serve(async (req) => {
           <h1 style="color: #0F766E; font-size: 24px; margin: 0;">Songa Travel & Tours</h1>
         </div>
         <div style="background: #f9fafb; border-radius: 12px; padding: 32px; margin-bottom: 24px;">
-          <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px;">Booking Confirmed</h2>
+          <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px;">Booking Confirmed ✅</h2>
           <p style="color: #6B7280; font-size: 14px; margin: 0 0 24px;">Hi ${to_name || "Traveler"}, your adventure is booked.</p>
           <table style="width: 100%; border-collapse: collapse;">
             <tr><td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Tour</td><td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${tour_title}</td></tr>
             <tr><td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Date</td><td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">${formattedDate}</td></tr>
             <tr><td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Guests</td><td style="padding: 8px 0; color: #111827; font-size: 14px; text-align: right;">${guests_count}</td></tr>
-            <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 12px 0; color: #111827; font-size: 16px; font-weight: 700;">Total</td><td style="padding: 12px 0; color: #0F766E; font-size: 16px; font-weight: 700; text-align: right;">$${Number(total_price).toLocaleString()}</td></tr>
+            <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 12px 0; color: #111827; font-size: 16px; font-weight: 700;">Total</td><td style="padding: 12px 0; color: #0F766E; font-size: 16px; font-weight: 700; text-align: right;">${formatKES(Number(total_price))}</td></tr>
           </table>
         </div>
         ${whatsappCta}
         <p style="color: #6B7280; font-size: 13px; text-align: center;">Booking Reference: <strong>${booking_id.slice(0, 8).toUpperCase()}</strong></p>
+        <p style="color: #6B7280; font-size: 12px; text-align: center; margin-top: 4px;">WhatsApp: +254 796 102 412</p>
         <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin-top: 8px;">Free cancellation available. Contact info@songatravel.com for support.</p>
       </div>`
       : `
@@ -92,9 +97,10 @@ Deno.serve(async (req) => {
         <div style="background: #fef2f2; border-radius: 12px; padding: 32px;">
           <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px;">Booking Cancelled</h2>
           <p style="color: #6B7280; font-size: 14px; margin: 0 0 16px;">Hi ${to_name || "Traveler"}, your booking for <strong>${tour_title}</strong> on ${formattedDate} has been cancelled.</p>
+          <p style="color: #6B7280; font-size: 14px;">Total: <strong>${formatKES(Number(total_price))}</strong></p>
           <p style="color: #6B7280; font-size: 13px;">Booking Reference: <strong>${booking_id.slice(0, 8).toUpperCase()}</strong></p>
         </div>
-        <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin-top: 24px;">Questions? Contact info@songatravel.com</p>
+        <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin-top: 24px;">Questions? Contact info@songatravel.com or WhatsApp +254 796 102 412</p>
       </div>`;
 
     const res = await fetch("https://api.resend.com/emails", {
