@@ -385,7 +385,7 @@ const AdminDashboard = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold truncate">{tour.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            {tour.destinations?.name || "No destination"} • ${Number(tour.price_per_person).toLocaleString()}/person • {tour.duration_days} days
+                            {tour.destinations?.name || "No destination"} • {formatKES(tour.price_per_person)}/person • {tour.duration_days} days
                           </p>
                           {tour.is_fixed_date && tour.departure_date && (
                             <p className="text-xs text-primary font-medium mt-0.5">
