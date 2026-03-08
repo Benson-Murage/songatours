@@ -326,7 +326,7 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          <StatCard icon={DollarSign} label="Revenue (Paid)" value={`$${stats.totalRevenue.toLocaleString()}`} />
+          <StatCard icon={DollarSign} label="Revenue (Paid)" value={formatKES(stats.totalRevenue)} />
           <StatCard icon={Globe} label="Total Tours" value={String(stats.totalTours)} />
           <StatCard icon={Eye} label="Active Tours" value={String(stats.activeTours)} />
           <StatCard icon={Users} label="Total Bookings" value={String(stats.totalBookings)} />
