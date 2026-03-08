@@ -155,25 +155,25 @@ const DestinationsPage = () => {
                 <button onClick={() => setFilter("destination", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {categoryFilter && (
+            {categoryFilter && categoryFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary capitalize">
                 {categoryFilter === "roadtrip" ? "Road Trip" : categoryFilter}
-                <button onClick={() => setFilter("category", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("category", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {difficultyFilter && (
+            {difficultyFilter && difficultyFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {difficultyFilter}
-                <button onClick={() => setFilter("difficulty", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("difficulty", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {durationFilter && (
+            {durationFilter && durationFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {durationFilter} days
-                <button onClick={() => setFilter("duration", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("duration", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {priceFilter && (
+            {priceFilter && priceFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {PRICE_RANGES.find((p) => p.value === priceFilter)?.label}
                 <button onClick={() => setFilter("price", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
