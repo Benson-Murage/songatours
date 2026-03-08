@@ -59,7 +59,7 @@ const DestinationsPage = () => {
     let result = tours || [];
     if (guestsFilter) result = result.filter((t) => t.max_group_size >= Number(guestsFilter));
     if (difficultyFilter && difficultyFilter !== "all") result = result.filter((t) => t.difficulty === difficultyFilter);
-    if (durationFilter) {
+    if (durationFilter && durationFilter !== "all") {
       if (durationFilter === "1-3") result = result.filter((t) => t.duration_days >= 1 && t.duration_days <= 3);
       else if (durationFilter === "4-7") result = result.filter((t) => t.duration_days >= 4 && t.duration_days <= 7);
       else if (durationFilter === "8+") result = result.filter((t) => t.duration_days >= 8);
