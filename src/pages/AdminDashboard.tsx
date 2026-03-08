@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { useDiscountCodes, useCreateDiscountCode, useToggleDiscountCode, useDeleteDiscountCode } from "@/hooks/useDiscountCodes";
 import { useAllReferrals } from "@/hooks/useReferrals";
 import InvoiceDownload from "@/components/InvoiceDownload";
-import { Recharts } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
