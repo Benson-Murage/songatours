@@ -82,7 +82,7 @@ const DestinationsPage = () => {
     return result;
   }, [tours, guestsFilter, searchQuery, difficultyFilter, durationFilter, priceFilter]);
 
-  const hasActiveFilters = !!activeSlug || !!guestsFilter || !!categoryFilter || !!difficultyFilter || !!durationFilter || !!priceFilter;
+  const hasActiveFilters = !!activeSlug || !!guestsFilter || (!!categoryFilter && categoryFilter !== "all") || (!!difficultyFilter && difficultyFilter !== "all") || (!!durationFilter && durationFilter !== "all") || (!!priceFilter && priceFilter !== "all");
 
   const clearFilters = () => { setSearchParams({}); setSearchQuery(""); };
 
