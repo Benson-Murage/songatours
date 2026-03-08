@@ -50,7 +50,8 @@ const DestinationsPage = () => {
   const durationFilter = searchParams.get("duration") || "";
   const priceFilter = searchParams.get("price") || "";
 
-  const { data: tours, isLoading, isError } = useTours(activeSlug || undefined, categoryFilter || undefined);
+  const effectiveCategory = categoryFilter && categoryFilter !== "all" ? categoryFilter : undefined;
+  const { data: tours, isLoading, isError } = useTours(activeSlug || undefined, effectiveCategory);
   const { data: destinations } = useDestinations();
   const [searchQuery, setSearchQuery] = useState("");
 
