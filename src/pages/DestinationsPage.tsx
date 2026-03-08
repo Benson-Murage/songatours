@@ -176,7 +176,7 @@ const DestinationsPage = () => {
             {priceFilter && priceFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {PRICE_RANGES.find((p) => p.value === priceFilter)?.label}
-                <button onClick={() => setFilter("price", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("price", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
           </div>
