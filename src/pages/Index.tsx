@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-safari.jpg";
 import { formatKES } from "@/lib/formatKES";
 import { format } from "date-fns";
+import useSEO from "@/hooks/useSEO";
 
 const Index = () => {
   const { data: tours, isLoading } = useTours();
