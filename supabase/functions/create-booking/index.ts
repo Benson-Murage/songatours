@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const userEmail = claimsData.claims.email as string;
 
-    const { tour_id, start_date, guests_count, phone_number, special_requests } = await req.json();
+    const { tour_id, start_date, guests_count, phone_number, special_requests, discount_code, referral_code } = await req.json();
 
     if (!tour_id || !start_date || !guests_count || !phone_number) {
       return jsonResponse({ error: "Missing required fields" }, 400);
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     // Fetch tour server-side
     const { data: tour, error: tourError } = await supabaseAdmin
       .from("tours")
-      .select("id, price_per_person, discount_price, max_group_size, max_total_slots, status, title, whatsapp_group_link, duration_days")
+      .select("id, price_per_person, discount_price, max_group_size, max_total_slots, status, title, whatsapp_group_link, duration_days, deposit_percentage")
       .eq("id", tour_id)
       .single();
 
@@ -76,7 +76,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Tour not found" }, 404);
     }
 
-    // Block booking on non-published tours
     if (tour.status !== "published") {
       return jsonResponse({ error: "This tour is not available for booking" }, 400);
     }
@@ -127,7 +126,45 @@ Deno.serve(async (req) => {
       tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person)
         ? Number(tour.discount_price)
         : Number(tour.price_per_person);
-    const totalPrice = effectivePrice * guestsNum;
+    let subtotal = effectivePrice * guestsNum;
+
+    // Validate discount code server-side
+    let discountAmount = 0;
+    let appliedCode: string | null = null;
+    if (discount_code) {
+      const code = String(discount_code).toUpperCase().trim();
+      const { data: dc } = await supabaseAdmin
+        .from("discount_codes")
+        .select("*")
+        .eq("code", code)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (dc) {
+        const isExpired = dc.expires_at && new Date(dc.expires_at) < new Date();
+        const isMaxed = dc.max_uses !== null && dc.times_used >= dc.max_uses;
+        const wrongTour = dc.applicable_tour_id && dc.applicable_tour_id !== tour.id;
+
+        if (!isExpired && !isMaxed && !wrongTour) {
+          if (dc.discount_type === "percentage") {
+            discountAmount = Math.round(subtotal * (Number(dc.discount_value) / 100));
+          } else {
+            discountAmount = Math.min(Number(dc.discount_value), subtotal);
+          }
+          appliedCode = code;
+
+          // Increment usage
+          await supabaseAdmin
+            .from("discount_codes")
+            .update({ times_used: dc.times_used + 1 })
+            .eq("id", dc.id);
+        }
+      }
+    }
+
+    const totalPrice = subtotal - discountAmount;
+    const depositPct = Number(tour.deposit_percentage || 30);
+    const depositAmt = Math.round(totalPrice * (depositPct / 100));
 
     // Calculate end_date
     const endDate = new Date(parsedDate);
@@ -147,15 +184,40 @@ Deno.serve(async (req) => {
         special_requests: sanitizedRequests,
         total_price: totalPrice,
         status: "pending",
+        deposit_amount: depositAmt,
         balance_due: totalPrice,
-        deposit_amount: 0,
+        discount_code: appliedCode,
+        discount_amount: discountAmount,
+        referral_code: referral_code ? String(referral_code).trim() : null,
       })
-      .select("id, total_price, status, booking_reference")
+      .select("id, total_price, status, booking_reference, discount_amount")
       .single();
 
     if (insertError) {
       console.error("Booking insert error:", insertError);
       return jsonResponse({ error: "Failed to create booking" }, 500);
+    }
+
+    // Handle referral completion
+    if (referral_code) {
+      const refCode = String(referral_code).trim();
+      const { data: referral } = await supabaseAdmin
+        .from("referrals")
+        .select("id, referrer_id")
+        .eq("referral_code", refCode)
+        .maybeSingle();
+
+      if (referral && referral.referrer_id !== userId) {
+        // Create a completed referral record
+        await supabaseAdmin.from("referrals").insert({
+          referrer_id: referral.referrer_id,
+          referral_code: refCode,
+          referred_email: userEmail,
+          referred_booking_id: booking.id,
+          reward_amount: Math.round(totalPrice * 0.05), // 5% reward
+          status: "completed",
+        });
+      }
     }
 
     // Get user profile for name
@@ -191,6 +253,8 @@ Deno.serve(async (req) => {
       whatsapp_group_link: tour.whatsapp_group_link,
       remaining_slots: remainingSlots - guestsNum,
       max_total_slots: tour.max_total_slots,
+      discount_applied: discountAmount > 0,
+      discount_amount: discountAmount,
     }, 201);
   } catch (err) {
     console.error("Unexpected error:", err);
