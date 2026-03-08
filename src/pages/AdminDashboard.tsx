@@ -102,7 +102,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, tours(title, category, destinations(name))")
+        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, booking_reference, discount_amount, payment_status, tours(title, category, destinations(name))")
         .order("created_at", { ascending: false });
       if (error) throw error;
 

@@ -43,6 +43,10 @@ const PRICE_RANGES = [
 ];
 
 const DestinationsPage = () => {
+  useSEO({
+    title: "Explore Tours",
+    description: "Browse curated African tours — safaris, road trips, hiking, beach getaways, and cultural experiences. Filter by destination, price, and difficulty.",
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSlug = searchParams.get("destination") || "";
   const guestsFilter = searchParams.get("guests") || "";
