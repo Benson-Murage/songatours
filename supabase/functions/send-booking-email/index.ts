@@ -19,6 +19,7 @@ interface BookingEmailPayload {
   to_email: string;
   to_name: string;
   booking_id: string;
+  booking_reference?: string;
   tour_title: string;
   start_date: string;
   guests_count: number;
@@ -40,11 +41,13 @@ Deno.serve(async (req) => {
     }
 
     const payload: BookingEmailPayload = await req.json();
-    const { to_email, to_name, booking_id, tour_title, start_date, guests_count, total_price, whatsapp_group_link, type } = payload;
+    const { to_email, to_name, booking_id, booking_reference, tour_title, start_date, guests_count, total_price, whatsapp_group_link, type } = payload;
 
     if (!to_email || !booking_id || !tour_title) {
       return jsonResponse({ error: "Missing required fields" }, 400);
     }
+
+    const displayRef = booking_reference || booking_id.slice(0, 8).toUpperCase();
 
     const formattedDate = new Date(start_date).toLocaleDateString("en-US", {
       weekday: "long",
@@ -85,7 +88,7 @@ Deno.serve(async (req) => {
           </table>
         </div>
         ${whatsappCta}
-        <p style="color: #6B7280; font-size: 13px; text-align: center;">Booking Reference: <strong>${booking_id.slice(0, 8).toUpperCase()}</strong></p>
+        <p style="color: #6B7280; font-size: 13px; text-align: center;">Booking Reference: <strong>${displayRef}</strong></p>
         <p style="color: #6B7280; font-size: 12px; text-align: center; margin-top: 4px;">WhatsApp: +254 796 102 412</p>
         <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin-top: 8px;">Free cancellation available. Contact info@songatravel.com for support.</p>
       </div>`
@@ -98,7 +101,7 @@ Deno.serve(async (req) => {
           <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px;">Booking Cancelled</h2>
           <p style="color: #6B7280; font-size: 14px; margin: 0 0 16px;">Hi ${to_name || "Traveler"}, your booking for <strong>${tour_title}</strong> on ${formattedDate} has been cancelled.</p>
           <p style="color: #6B7280; font-size: 14px;">Total: <strong>${formatKES(Number(total_price))}</strong></p>
-          <p style="color: #6B7280; font-size: 13px;">Booking Reference: <strong>${booking_id.slice(0, 8).toUpperCase()}</strong></p>
+          <p style="color: #6B7280; font-size: 13px;">Booking Reference: <strong>${displayRef}</strong></p>
         </div>
         <p style="color: #9CA3AF; font-size: 12px; text-align: center; margin-top: 24px;">Questions? Contact info@songatravel.com or WhatsApp +254 796 102 412</p>
       </div>`;
