@@ -10,7 +10,7 @@ import { useTours, useDestinations } from "@/hooks/useTours";
 import { useState, useMemo } from "react";
 
 const CATEGORIES = [
-  { value: "", label: "All Categories" },
+  { value: "all", label: "All Categories" },
   { value: "safari", label: "Safari" },
   { value: "roadtrip", label: "Road Trip" },
   { value: "hike", label: "Hiking" },
@@ -20,21 +20,21 @@ const CATEGORIES = [
 ];
 
 const DIFFICULTIES = [
-  { value: "", label: "Any Difficulty" },
+  { value: "all", label: "Any Difficulty" },
   { value: "Easy", label: "Easy" },
   { value: "Medium", label: "Medium" },
   { value: "Hard", label: "Hard" },
 ];
 
 const DURATIONS = [
-  { value: "", label: "Any Duration" },
+  { value: "all", label: "Any Duration" },
   { value: "1-3", label: "1-3 days" },
   { value: "4-7", label: "4-7 days" },
   { value: "8+", label: "8+ days" },
 ];
 
 const PRICE_RANGES = [
-  { value: "", label: "Any Price" },
+  { value: "all", label: "Any Price" },
   { value: "0-10000", label: "Under KSh 10,000" },
   { value: "10000-30000", label: "KSh 10,000 – 30,000" },
   { value: "30000-60000", label: "KSh 30,000 – 60,000" },
