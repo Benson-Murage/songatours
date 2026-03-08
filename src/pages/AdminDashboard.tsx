@@ -564,7 +564,7 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3">{b.guests_count}</td>
-                        <td className="px-4 py-3 font-medium">${Number(b.total_price).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-medium">{formatKES(b.total_price)}</td>
                         <td className="px-4 py-3 text-xs">{new Date(b.start_date).toLocaleDateString()}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
