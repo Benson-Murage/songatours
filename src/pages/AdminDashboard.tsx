@@ -670,6 +670,27 @@ const AdminDashboard = () => {
               <p className="text-muted-foreground text-center py-8">No destinations yet.</p>
             )}
           </TabsContent>
+
+          {/* ── CUSTOMERS TAB ── */}
+          <TabsContent value="customers" className="space-y-4">
+            <CustomersTab bookings={adminBookings || []} />
+          </TabsContent>
+
+          {/* ── DISCOUNTS TAB ── */}
+          <TabsContent value="discounts" className="space-y-4">
+            <DiscountCodesTab tours={adminTours || []} />
+          </TabsContent>
+
+          {/* ── REFERRALS TAB ── */}
+          <TabsContent value="referrals" className="space-y-4">
+            <ReferralsTab />
+          </TabsContent>
+
+          {/* ── ANALYTICS TAB ── */}
+          <TabsContent value="analytics" className="space-y-4">
+            <AnalyticsTab bookings={adminBookings || []} tours={adminTours || []} />
+          </TabsContent>
+
         </Tabs>
       </div>
 
