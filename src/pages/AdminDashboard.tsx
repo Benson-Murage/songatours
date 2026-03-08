@@ -4,10 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
   Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download, QrCode, CalendarDays,
+  Tag, Gift, UserCircle, TrendingUp, BarChart3,
 } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
 import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
+import { useDiscountCodes, useCreateDiscountCode, useToggleDiscountCode, useDeleteDiscountCode } from "@/hooks/useDiscountCodes";
+import { useAllReferrals } from "@/hooks/useReferrals";
+import InvoiceDownload from "@/components/InvoiceDownload";
+import { Recharts } from "recharts";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
