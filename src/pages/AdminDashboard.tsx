@@ -597,14 +597,31 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-4 py-3">
                           {b.status !== "cancelled" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive text-xs h-7"
-                              onClick={() => setBookingToCancel(b)}
-                            >
-                              Cancel
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive text-xs h-7"
+                                onClick={() => setBookingToCancel(b)}
+                              >
+                                Cancel
+                              </Button>
+                              <InvoiceDownload data={{
+                                booking_reference: (b as any).booking_reference || b.id.slice(0, 8),
+                                customer_name: b.bookedByProfile?.full_name || "Customer",
+                                customer_email: b.bookedByProfile?.email || "",
+                                customer_phone: b.phone_number || b.bookedByProfile?.phone || "",
+                                tour_title: b.tours?.title || "Tour",
+                                destination: b.tours?.destinations?.name,
+                                start_date: b.start_date,
+                                guests_count: b.guests_count,
+                                price_per_person: Number(b.total_price) / b.guests_count,
+                                total_price: Number(b.total_price),
+                                discount_amount: Number((b as any).discount_amount || 0),
+                                payment_status: b.status === "paid" ? "paid" : "pending",
+                                created_at: b.created_at,
+                              }} />
+                            </div>
                           )}
                         </td>
                       </tr>
