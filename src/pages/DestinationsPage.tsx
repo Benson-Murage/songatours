@@ -64,7 +64,7 @@ const DestinationsPage = () => {
       else if (durationFilter === "4-7") result = result.filter((t) => t.duration_days >= 4 && t.duration_days <= 7);
       else if (durationFilter === "8+") result = result.filter((t) => t.duration_days >= 8);
     }
-    if (priceFilter) {
+    if (priceFilter && priceFilter !== "all") {
       const effectivePrice = (t: any) => t.discount_price ?? t.price_per_person;
       if (priceFilter === "0-10000") result = result.filter((t) => effectivePrice(t) < 10000);
       else if (priceFilter === "10000-30000") result = result.filter((t) => effectivePrice(t) >= 10000 && effectivePrice(t) <= 30000);
