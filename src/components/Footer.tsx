@@ -50,11 +50,12 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Support</h4>
+            <h4 className="font-semibold mb-4">Legal</h4>
             <div className="flex flex-col gap-2.5">
-              <span className="text-sm text-muted-foreground">salmajeods11@gmail.com</span>
-              <span className="text-sm text-muted-foreground">+254 796 102 412</span>
-              <span className="text-sm text-muted-foreground">Nairobi, Kenya</span>
+              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms & Conditions</Link>
+              <Link to="/refund-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Refund Policy</Link>
+              <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact Us</Link>
             </div>
           </div>
 
