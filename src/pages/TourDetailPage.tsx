@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, Loader2,
   CheckCircle2, Heart, ShieldCheck, Phone, XCircle, AlertTriangle, MessageCircle,
-  CalendarDays, Route,
+  CalendarDays, Route, Tag,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -20,11 +19,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useTour, useReviews, useFavorites, useToggleFavorite, useTourCapacity } from "@/hooks/useTours";
+import { useValidateDiscount } from "@/hooks/useDiscountCodes";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import { formatKES } from "@/lib/formatKES";
+import ShareButtons from "@/components/ShareButtons";
+import SeatIndicator from "@/components/SeatIndicator";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop";
 const WHATSAPP_ADMIN = "254796102412";
@@ -37,11 +39,15 @@ const TourDetailPage = () => {
   const { data: reviews } = useReviews(id!);
   const { data: favorites } = useFavorites(user?.id);
   const toggleFavorite = useToggleFavorite();
+  const validateDiscount = useValidateDiscount();
 
   const [startDate, setStartDate] = useState("");
   const [guests, setGuests] = useState(1);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; discountAmount: number } | null>(null);
+  const [referralCode, setReferralCode] = useState("");
   const [booking, setBooking] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
@@ -90,7 +96,9 @@ const TourDetailPage = () => {
   const isCanceled = tour.status === "canceled";
   const hasDiscount = tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person);
   const effectivePrice = hasDiscount ? Number(tour.discount_price) : Number(tour.price_per_person);
-  const totalPrice = effectivePrice * guests;
+  const subtotal = effectivePrice * guests;
+  const discountAmt = appliedDiscount?.discountAmount || 0;
+  const totalPrice = subtotal - discountAmt;
   const destination = tour.destinations as { name: string; country: string } | null;
   const isFixedDate = tour.is_fixed_date && !!tour.departure_date;
 
@@ -103,7 +111,6 @@ const TourDetailPage = () => {
 
   const soldOut = capacity?.soldOut ?? false;
 
-  // Parse itinerary
   const itinerary: { day: number; title: string; description?: string }[] = (() => {
     try {
       const raw = (tour as any).itinerary;
@@ -111,6 +118,8 @@ const TourDetailPage = () => {
     } catch {}
     return [];
   })();
+
+  const tourUrl = `${window.location.origin}/tours/${tour.id}`;
 
   const validateBooking = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -124,6 +133,23 @@ const TourDetailPage = () => {
     else if (!/^[+\d\s\-()]{7,24}$/.test(phoneNumber.trim())) newErrors.phoneNumber = "Enter a valid phone number";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleApplyPromo = () => {
+    if (!promoCode.trim()) return;
+    validateDiscount.mutate(
+      { code: promoCode, tourId: tour.id, subtotal },
+      {
+        onSuccess: (result) => {
+          setAppliedDiscount({ code: result.code, discountAmount: result.discountAmount });
+          toast.success(`Promo applied! You save ${formatKES(result.discountAmount)}`);
+        },
+        onError: (err: any) => {
+          setAppliedDiscount(null);
+          toast.error(err.message || "Invalid promo code");
+        },
+      }
+    );
   };
 
   const handleBook = async () => {
@@ -144,6 +170,8 @@ const TourDetailPage = () => {
           guests_count: guests,
           phone_number: phoneNumber.trim(),
           special_requests: specialRequests.trim() || null,
+          discount_code: appliedDiscount?.code || null,
+          referral_code: referralCode.trim() || null,
         },
       });
 
@@ -156,7 +184,8 @@ const TourDetailPage = () => {
           tour_title: tour.title,
           start_date: bookingDate,
           guests,
-          total_price: totalPrice,
+          total_price: data?.booking?.total_price || totalPrice,
+          discount_amount: data?.discount_amount || 0,
           phone: phoneNumber.trim(),
           whatsapp_group_link: data?.whatsapp_group_link || null,
         });
@@ -370,22 +399,15 @@ const TourDetailPage = () => {
                 )}
               </div>
 
+              {/* Seat Indicator */}
               {capacity && !isCanceled && (
-                <div className="mt-4 rounded-xl bg-secondary p-3">
-                  <div className="flex items-center justify-between text-sm mb-1.5">
-                    <span className="text-muted-foreground">
-                      {effectiveStartDate ? `Availability for ${new Date(effectiveStartDate).toLocaleDateString()}` : "Overall availability"}
-                    </span>
-                    <span className={`font-medium ${soldOut ? "text-destructive" : "text-primary"}`}>
-                      {soldOut ? "Sold Out" : `${capacity.remaining} spots left`}
-                    </span>
-                  </div>
-                  <Progress value={capacity.total > 0 ? ((capacity.booked || 0) / capacity.total) * 100 : 0} className="h-2" />
+                <div className="mt-4">
+                  <SeatIndicator booked={capacity.booked || 0} total={capacity.total} />
                 </div>
               )}
 
               {/* WhatsApp Quick Contact */}
-              <div className="mt-4">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <a
                   href={`https://wa.me/${WHATSAPP_ADMIN}?text=${encodeURIComponent(`Hi! I'm interested in the tour: ${tour.title}`)}`}
                   target="_blank"
@@ -395,6 +417,12 @@ const TourDetailPage = () => {
                   <MessageCircle className="h-4 w-4" />
                   Chat with us on WhatsApp
                 </a>
+              </div>
+
+              {/* Share */}
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-2">Share this tour</p>
+                <ShareButtons url={tourUrl} title={tour.title} description={tour.description || undefined} />
               </div>
             </div>
 
@@ -412,6 +440,20 @@ const TourDetailPage = () => {
                 <p className="leading-relaxed text-muted-foreground">
                   {tour.description || "Experience the beauty of Africa like never before."}
                 </p>
+                {/* Static map embed */}
+                {destination && (
+                  <div className="mt-6 rounded-xl overflow-hidden border border-border">
+                    <iframe
+                      title={`Map of ${destination.name}`}
+                      width="100%"
+                      height="250"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(destination.name + ", " + destination.country)}`}
+                      allowFullScreen
+                    />
+                  </div>
+                )}
               </TabsContent>
 
               {itinerary.length > 0 && (
@@ -591,7 +633,7 @@ const TourDetailPage = () => {
                     <Input id="guests" type="number" min={1}
                       max={Math.min(tour.max_group_size, capacity?.remaining ?? tour.max_group_size)}
                       value={guests}
-                      onChange={(e) => { setGuests(Number(e.target.value)); setErrors((p) => ({ ...p, guests: "" })); }}
+                      onChange={(e) => { setGuests(Number(e.target.value)); setErrors((p) => ({ ...p, guests: "" })); setAppliedDiscount(null); }}
                       className={errors.guests ? "border-destructive" : ""} />
                     {errors.guests && <p className="text-xs text-destructive">{errors.guests}</p>}
                   </div>
@@ -613,6 +655,39 @@ const TourDetailPage = () => {
                       className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
                       rows={2} maxLength={1000} />
                   </div>
+
+                  {/* Promo Code */}
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" /> Promo Code</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={promoCode}
+                        onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setAppliedDiscount(null); }}
+                        placeholder="e.g. SONGA10"
+                        className="flex-1"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={handleApplyPromo}
+                        disabled={validateDiscount.isPending || !promoCode.trim()}>
+                        {validateDiscount.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
+                      </Button>
+                    </div>
+                    {appliedDiscount && (
+                      <p className="text-xs text-primary font-medium flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        {appliedDiscount.code} applied — you save {formatKES(appliedDiscount.discountAmount)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Referral Code */}
+                  <div className="space-y-1.5">
+                    <Label>Referral Code (optional)</Label>
+                    <Input
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. REF-SONGA-XXXX"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -620,9 +695,15 @@ const TourDetailPage = () => {
                 <>
                   <div className="space-y-2 border-t border-border pt-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{formatKES(effectivePrice)} x {guests} guest{guests > 1 ? "s" : ""}</span>
-                      <span className="font-medium">{formatKES(totalPrice)}</span>
+                      <span className="text-muted-foreground">{formatKES(effectivePrice)} × {guests} guest{guests > 1 ? "s" : ""}</span>
+                      <span className="font-medium">{formatKES(subtotal)}</span>
                     </div>
+                    {discountAmt > 0 && (
+                      <div className="flex justify-between text-primary">
+                        <span>Promo discount</span>
+                        <span>-{formatKES(discountAmt)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-base font-bold">
                       <span>Total</span>
                       <span className="text-foreground">{formatKES(totalPrice)}</span>
@@ -734,6 +815,12 @@ const TourDetailPage = () => {
                   <span className="text-muted-foreground">Phone</span>
                   <span className="text-foreground">{bookingSummary.phone}</span>
                 </div>
+                {bookingSummary.discount_amount > 0 && (
+                  <div className="flex justify-between text-primary">
+                    <span>Discount</span>
+                    <span>-{formatKES(bookingSummary.discount_amount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-border pt-2">
                   <span className="font-semibold">Total</span>
                   <span className="font-bold text-foreground">{formatKES(bookingSummary.total_price)}</span>

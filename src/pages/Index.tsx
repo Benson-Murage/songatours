@@ -3,6 +3,7 @@ import HeroSearch from "@/components/HeroSearch";
 import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
 import DestinationCard from "@/components/DestinationCard";
+import TrustSection from "@/components/TrustSection";
 import { useTours, useTrendingDestinations } from "@/hooks/useTours";
 import { ArrowRight, Car, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -19,7 +20,6 @@ const Index = () => {
   const dealTours = tours?.filter((t) => t.discount_price != null && t.discount_price < t.price_per_person) ?? [];
   const featuredTours = tours?.slice(0, 8) ?? [];
 
-  // Upcoming departures: fixed-date tours sorted by nearest departure
   const now = new Date();
   const upcomingDepartures = tours
     ?.filter((t) => t.is_fixed_date && t.departure_date && new Date(t.departure_date) >= now)
@@ -47,6 +47,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Trust Section */}
+      <TrustSection />
 
       {/* Trending Destinations */}
       {trendingDestinations && trendingDestinations.length > 0 && (
