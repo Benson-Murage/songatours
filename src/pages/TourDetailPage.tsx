@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, Loader2,
   CheckCircle2, Heart, ShieldCheck, Phone, XCircle, AlertTriangle, MessageCircle,
-  CalendarDays,
+  CalendarDays, Route,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
+import { formatKES } from "@/lib/formatKES";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop";
+const WHATSAPP_ADMIN = "254796102412";
 
 const TourDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,8 +49,9 @@ const TourDetailPage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [whatsappModal, setWhatsappModal] = useState<string | null>(null);
+  const [bookingRef, setBookingRef] = useState<string | null>(null);
+  const [bookingSummary, setBookingSummary] = useState<any>(null);
 
-  // For fixed-date tours, use departure_date automatically
   const effectiveStartDate = tour?.is_fixed_date && tour?.departure_date
     ? tour.departure_date
     : startDate;
@@ -100,6 +103,15 @@ const TourDetailPage = () => {
 
   const soldOut = capacity?.soldOut ?? false;
 
+  // Parse itinerary
+  const itinerary: { day: number; title: string; description?: string }[] = (() => {
+    try {
+      const raw = (tour as any).itinerary;
+      if (Array.isArray(raw) && raw.length > 0) return raw;
+    } catch {}
+    return [];
+  })();
+
   const validateBooking = (): boolean => {
     const newErrors: Record<string, string> = {};
     const bookingDate = isFixedDate ? tour.departure_date! : startDate;
@@ -139,10 +151,20 @@ const TourDetailPage = () => {
         toast.error(data?.error || "Booking failed. Please try again.");
       } else {
         toast.success("Booking confirmed!");
+        setBookingSummary({
+          reference: data?.booking?.booking_reference || null,
+          tour_title: tour.title,
+          start_date: bookingDate,
+          guests,
+          total_price: totalPrice,
+          phone: phoneNumber.trim(),
+          whatsapp_group_link: data?.whatsapp_group_link || null,
+        });
+        setBookingRef(data?.booking?.booking_reference || null);
         if (data?.whatsapp_group_link) {
           setWhatsappModal(data.whatsapp_group_link);
         } else {
-          navigate("/dashboard");
+          setWhatsappModal("confirmed");
         }
       }
     } catch {
@@ -361,11 +383,25 @@ const TourDetailPage = () => {
                   <Progress value={capacity.total > 0 ? ((capacity.booked || 0) / capacity.total) * 100 : 0} className="h-2" />
                 </div>
               )}
+
+              {/* WhatsApp Quick Contact */}
+              <div className="mt-4">
+                <a
+                  href={`https://wa.me/${WHATSAPP_ADMIN}?text=${encodeURIComponent(`Hi! I'm interested in the tour: ${tour.title}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-[hsl(142,70%,45%)]/10 px-4 py-2 text-sm font-medium text-[hsl(142,70%,35%)] hover:bg-[hsl(142,70%,45%)]/20 transition-colors"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Chat with us on WhatsApp
+                </a>
+              </div>
             </div>
 
             <Tabs defaultValue="overview">
-              <TabsList>
+              <TabsList className="flex-wrap">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
+                {itinerary.length > 0 && <TabsTrigger value="itinerary">Itinerary</TabsTrigger>}
                 <TabsTrigger value="included">Included</TabsTrigger>
                 <TabsTrigger value="excluded">Excluded</TabsTrigger>
                 <TabsTrigger value="highlights">Highlights</TabsTrigger>
@@ -377,6 +413,29 @@ const TourDetailPage = () => {
                   {tour.description || "Experience the beauty of Africa like never before."}
                 </p>
               </TabsContent>
+
+              {itinerary.length > 0 && (
+                <TabsContent value="itinerary" className="mt-4">
+                  <div className="space-y-4">
+                    {itinerary.map((item, i) => (
+                      <div key={i} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">
+                            {item.day}
+                          </div>
+                          {i < itinerary.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+                        </div>
+                        <div className="pb-4">
+                          <p className="font-semibold text-foreground">Day {item.day} — {item.title}</p>
+                          {item.description && (
+                            <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+              )}
 
               <TabsContent value="included" className="mt-4">
                 {tour.included?.length ? (
@@ -515,11 +574,11 @@ const TourDetailPage = () => {
               <div className="flex items-baseline gap-2">
                 {hasDiscount ? (
                   <>
-                    <span className="text-sm text-muted-foreground line-through">${Number(tour.price_per_person).toLocaleString()}</span>
-                    <span className="text-2xl font-bold text-accent">${Number(tour.discount_price).toLocaleString()}</span>
+                    <span className="text-sm text-muted-foreground line-through">{formatKES(tour.price_per_person)}</span>
+                    <span className="text-2xl font-bold text-accent">{formatKES(tour.discount_price!)}</span>
                   </>
                 ) : (
-                  <span className="text-2xl font-bold text-foreground">${Number(tour.price_per_person).toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-foreground">{formatKES(tour.price_per_person)}</span>
                 )}
                 <span className="text-sm text-muted-foreground">/ person</span>
               </div>
@@ -542,7 +601,7 @@ const TourDetailPage = () => {
                     </Label>
                     <Input id="phoneNumber" type="tel" value={phoneNumber}
                       onChange={(e) => { setPhoneNumber(e.target.value); setErrors((p) => ({ ...p, phoneNumber: "" })); }}
-                      placeholder="+255 700 000 000"
+                      placeholder="+254 700 000 000"
                       className={errors.phoneNumber ? "border-destructive" : ""} />
                     {errors.phoneNumber && <p className="text-xs text-destructive">{errors.phoneNumber}</p>}
                   </div>
@@ -561,12 +620,12 @@ const TourDetailPage = () => {
                 <>
                   <div className="space-y-2 border-t border-border pt-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">${effectivePrice.toLocaleString()} x {guests} guest{guests > 1 ? "s" : ""}</span>
-                      <span className="font-medium">${totalPrice.toLocaleString()}</span>
+                      <span className="text-muted-foreground">{formatKES(effectivePrice)} x {guests} guest{guests > 1 ? "s" : ""}</span>
+                      <span className="font-medium">{formatKES(totalPrice)}</span>
                     </div>
                     <div className="flex justify-between text-base font-bold">
                       <span>Total</span>
-                      <span className="text-foreground">${totalPrice.toLocaleString()}</span>
+                      <span className="text-foreground">{formatKES(totalPrice)}</span>
                     </div>
                   </div>
 
@@ -604,13 +663,13 @@ const TourDetailPage = () => {
             <div>
               {hasDiscount ? (
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-xs text-muted-foreground line-through">${Number(tour.price_per_person).toLocaleString()}</span>
-                  <span className="text-lg font-bold text-accent">${Number(tour.discount_price).toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground line-through">{formatKES(tour.price_per_person)}</span>
+                  <span className="text-lg font-bold text-accent">{formatKES(tour.discount_price!)}</span>
                   <span className="text-xs text-muted-foreground">/ person</span>
                 </div>
               ) : (
                 <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-bold text-foreground">${Number(tour.price_per_person).toLocaleString()}</span>
+                  <span className="text-lg font-bold text-foreground">{formatKES(tour.price_per_person)}</span>
                   <span className="text-xs text-muted-foreground">/ person</span>
                 </div>
               )}
@@ -636,34 +695,64 @@ const TourDetailPage = () => {
 
       <div className="h-20 lg:hidden" />
 
-      {/* WhatsApp Group Modal */}
+      {/* Booking Confirmation Modal */}
       <Dialog open={!!whatsappModal} onOpenChange={(open) => {
         if (!open) { setWhatsappModal(null); navigate("/dashboard"); }
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-primary" />
+              <CheckCircle2 className="h-5 w-5 text-primary" />
               Booking Confirmed!
             </DialogTitle>
             <DialogDescription>
-              Join the tour's WhatsApp group to stay connected with your guide and fellow travelers.
+              Your booking has been received. Here's your summary.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="rounded-xl bg-secondary p-4 text-center space-y-3">
-              <p className="text-sm text-muted-foreground">Tour WhatsApp Group</p>
-              <Button variant="accent" size="lg" className="w-full"
-                onClick={() => window.open(whatsappModal!, "_blank", "noopener,noreferrer")}>
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Join WhatsApp Group
+          {bookingSummary && (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-xl bg-secondary p-4 space-y-2 text-sm">
+                {bookingSummary.reference && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Reference</span>
+                    <span className="font-bold text-foreground">{bookingSummary.reference}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tour</span>
+                  <span className="font-medium text-foreground">{bookingSummary.tour_title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Date</span>
+                  <span className="text-foreground">{new Date(bookingSummary.start_date).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Guests</span>
+                  <span className="text-foreground">{bookingSummary.guests}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Phone</span>
+                  <span className="text-foreground">{bookingSummary.phone}</span>
+                </div>
+                <div className="flex justify-between border-t border-border pt-2">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-bold text-foreground">{formatKES(bookingSummary.total_price)}</span>
+                </div>
+              </div>
+
+              {bookingSummary.whatsapp_group_link && (
+                <Button variant="accent" size="lg" className="w-full"
+                  onClick={() => window.open(bookingSummary.whatsapp_group_link, "_blank", "noopener,noreferrer")}>
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Join Tour WhatsApp Group
+                </Button>
+              )}
+              <Button variant="outline" className="w-full"
+                onClick={() => { setWhatsappModal(null); navigate("/dashboard"); }}>
+                Go to My Trips
               </Button>
             </div>
-            <Button variant="outline" className="w-full"
-              onClick={() => { setWhatsappModal(null); navigate("/dashboard"); }}>
-              Go to My Trips
-            </Button>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </Layout>

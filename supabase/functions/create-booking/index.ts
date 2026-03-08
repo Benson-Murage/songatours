@@ -147,8 +147,10 @@ Deno.serve(async (req) => {
         special_requests: sanitizedRequests,
         total_price: totalPrice,
         status: "pending",
+        balance_due: totalPrice,
+        deposit_amount: 0,
       })
-      .select("id, total_price, status")
+      .select("id, total_price, status, booking_reference")
       .single();
 
     if (insertError) {

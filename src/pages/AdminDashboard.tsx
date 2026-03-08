@@ -5,6 +5,7 @@ import {
   AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
   Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download, QrCode, CalendarDays,
 } from "lucide-react";
+import { formatKES } from "@/lib/formatKES";
 import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import Layout from "@/components/Layout";
@@ -326,7 +327,7 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          <StatCard icon={DollarSign} label="Revenue (Paid)" value={`$${stats.totalRevenue.toLocaleString()}`} />
+          <StatCard icon={DollarSign} label="Revenue (Paid)" value={formatKES(stats.totalRevenue)} />
           <StatCard icon={Globe} label="Total Tours" value={String(stats.totalTours)} />
           <StatCard icon={Eye} label="Active Tours" value={String(stats.activeTours)} />
           <StatCard icon={Users} label="Total Bookings" value={String(stats.totalBookings)} />
@@ -384,7 +385,7 @@ const AdminDashboard = () => {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold truncate">{tour.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            {tour.destinations?.name || "No destination"} • ${Number(tour.price_per_person).toLocaleString()}/person • {tour.duration_days} days
+                            {tour.destinations?.name || "No destination"} • {formatKES(tour.price_per_person)}/person • {tour.duration_days} days
                           </p>
                           {tour.is_fixed_date && tour.departure_date && (
                             <p className="text-xs text-primary font-medium mt-0.5">
@@ -563,7 +564,7 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3">{b.guests_count}</td>
-                        <td className="px-4 py-3 font-medium">${Number(b.total_price).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-medium">{formatKES(b.total_price)}</td>
                         <td className="px-4 py-3 text-xs">{new Date(b.start_date).toLocaleDateString()}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${

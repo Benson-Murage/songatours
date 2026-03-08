@@ -7,17 +7,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
+import { formatKES } from "@/lib/formatKES";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pending: { label: "Pending", className: "bg-accent/10 text-accent" },
@@ -114,13 +109,16 @@ const Dashboard = () => {
             </p>
           )}
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(b.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(b.start_date).toLocaleDateString("en-KE", { month: "short", day: "numeric", year: "numeric" })}</span>
             <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {b.guests_count} guest{b.guests_count > 1 ? "s" : ""}</span>
           </div>
+          {(b as any).booking_reference && (
+            <p className="text-xs text-muted-foreground font-mono">Ref: {(b as any).booking_reference}</p>
+          )}
         </div>
         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>{status.label}</span>
-          <span className="text-lg font-bold text-foreground">${Number(b.total_price).toLocaleString()}</span>
+          <span className="text-lg font-bold text-foreground">{formatKES(b.total_price)}</span>
           <div className="flex gap-2 flex-wrap justify-end">
             {b.status !== "cancelled" && b.tours?.whatsapp_group_link && (
               <Button
@@ -140,11 +138,6 @@ const Dashboard = () => {
                 disabled={cancelBooking.isPending}
               >
                 <XCircle className="mr-1 h-3 w-3" /> Cancel
-              </Button>
-            )}
-            {b.status !== "cancelled" && (
-              <Button variant="outline" size="sm" onClick={() => toast.info("Voucher download coming soon!")}>
-                <Download className="mr-1 h-3 w-3" /> Voucher
               </Button>
             )}
           </div>

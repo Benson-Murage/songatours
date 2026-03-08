@@ -4,10 +4,12 @@ import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
 import DestinationCard from "@/components/DestinationCard";
 import { useTours, useTrendingDestinations } from "@/hooks/useTours";
-import { ArrowRight, Car } from "lucide-react";
+import { ArrowRight, Car, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-safari.jpg";
+import { formatKES } from "@/lib/formatKES";
+import { format } from "date-fns";
 
 const Index = () => {
   const { data: tours, isLoading } = useTours();
@@ -16,6 +18,13 @@ const Index = () => {
 
   const dealTours = tours?.filter((t) => t.discount_price != null && t.discount_price < t.price_per_person) ?? [];
   const featuredTours = tours?.slice(0, 8) ?? [];
+
+  // Upcoming departures: fixed-date tours sorted by nearest departure
+  const now = new Date();
+  const upcomingDepartures = tours
+    ?.filter((t) => t.is_fixed_date && t.departure_date && new Date(t.departure_date) >= now)
+    .sort((a, b) => new Date(a.departure_date!).getTime() - new Date(b.departure_date!).getTime())
+    .slice(0, 6) ?? [];
 
   return (
     <Layout>
@@ -59,9 +68,58 @@ const Index = () => {
         </section>
       )}
 
+      {/* Upcoming Departures */}
+      {upcomingDepartures.length > 0 && (
+        <section className="bg-primary/5 py-16">
+          <div className="container mx-auto px-4">
+            <div className="mb-8 flex items-end justify-between">
+              <div className="flex items-center gap-3">
+                <CalendarDays className="h-7 w-7 text-primary" />
+                <div>
+                  <h2 className="text-3xl font-bold text-foreground">Upcoming Trips</h2>
+                  <p className="mt-1 text-muted-foreground">Tours with confirmed departure dates</p>
+                </div>
+              </div>
+              <Link to="/destinations">
+                <Button variant="ghost" size="sm" className="hidden sm:flex">
+                  View All <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {upcomingDepartures.map((tour) => (
+                <Link key={tour.id} to={`/tours/${tour.id}`} className="group">
+                  <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
+                    <img
+                      src={tour.tour_images?.sort((a, b) => a.display_order - b.display_order)?.[0]?.image_url || tour.image_url || "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=200&h=200&fit=crop"}
+                      alt={tour.title}
+                      className="h-20 w-20 rounded-xl object-cover shrink-0"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=200&h=200&fit=crop"; }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{tour.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{tour.duration_days} days • {tour.difficulty}</p>
+                      <div className="mt-1.5 flex items-center gap-1 text-sm text-primary font-medium">
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {format(new Date(tour.departure_date!), "d MMM yyyy")}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg font-bold text-foreground">{formatKES(tour.discount_price ?? tour.price_per_person)}</p>
+                      <p className="text-xs text-muted-foreground">per person</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Road Trips */}
       {roadTrips && roadTrips.length > 0 && (
-        <section className="bg-primary/5 py-16">
+        <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="mb-8 flex items-end justify-between">
               <div className="flex items-center gap-3">

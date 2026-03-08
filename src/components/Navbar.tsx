@@ -2,24 +2,16 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, MapPin, User, LogOut, Briefcase, Shield, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetClose,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const navLinks = [
-  { to: "/destinations", label: "Destinations" },
+  { to: "/destinations", label: "Tours" },
   { to: "/road-trips", label: "Road Trips" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
@@ -31,11 +23,7 @@ const Navbar = () => {
   const location = useLocation();
 
   const initials = user?.user_metadata?.full_name
-    ? user.user_metadata.full_name
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase()
+    ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase()
     : user?.email?.[0]?.toUpperCase() ?? "U";
 
   const isActive = (path: string) => location.pathname === path;
@@ -45,12 +33,9 @@ const Navbar = () => {
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2">
           <MapPin className="h-6 w-6 text-accent" />
-          <span className="text-xl font-bold tracking-tight text-foreground">
-            Songa
-          </span>
+          <span className="text-xl font-bold tracking-tight text-foreground">Songa</span>
         </Link>
 
-        {/* Desktop Links */}
         <div className="hidden items-center gap-6 md:flex">
           {navLinks.map((link) => (
             <Link
@@ -66,9 +51,7 @@ const Navbar = () => {
 
           {!user ? (
             <Link to="/auth">
-              <Button variant="accent" size="sm">
-                Sign In
-              </Button>
+              <Button variant="accent" size="sm">Sign In</Button>
             </Link>
           ) : (
             <DropdownMenu>
@@ -76,30 +59,21 @@ const Navbar = () => {
                 <button className="rounded-full ring-2 ring-border transition-all hover:ring-primary">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={user.user_metadata?.avatar_url} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-                      {initials}
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">{initials}</AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link to="/dashboard" className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4" /> My Trips
-                  </Link>
+                  <Link to="/dashboard" className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> My Trips</Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>
-                    <Link to="/admin" className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" /> Admin
-                    </Link>
+                    <Link to="/admin" className="flex items-center gap-2"><Shield className="h-4 w-4" /> Admin</Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={signOut}
-                  className="flex items-center gap-2 text-destructive"
-                >
+                <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 text-destructive">
                   <LogOut className="h-4 w-4" /> Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -107,12 +81,9 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Drawer */}
         <Sheet>
           <SheetTrigger asChild>
-            <button className="md:hidden" aria-label="Open menu">
-              <Menu className="h-6 w-6" />
-            </button>
+            <button className="md:hidden" aria-label="Open menu"><Menu className="h-6 w-6" /></button>
           </SheetTrigger>
           <SheetContent side="right" className="w-72 p-0">
             <div className="flex h-full flex-col">
@@ -136,19 +107,13 @@ const Navbar = () => {
                 {user && (
                   <>
                     <SheetClose asChild>
-                      <Link
-                        to="/dashboard"
-                        className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary"
-                      >
+                      <Link to="/dashboard" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary">
                         <Briefcase className="h-4 w-4" /> My Trips
                       </Link>
                     </SheetClose>
                     {isAdmin && (
                       <SheetClose asChild>
-                        <Link
-                          to="/admin"
-                          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary"
-                        >
+                        <Link to="/admin" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary">
                           <Shield className="h-4 w-4" /> Admin
                         </Link>
                       </SheetClose>
@@ -159,18 +124,10 @@ const Navbar = () => {
               <div className="border-t border-border p-4">
                 {!user ? (
                   <SheetClose asChild>
-                    <Link to="/auth">
-                      <Button variant="accent" className="w-full">
-                        Sign In
-                      </Button>
-                    </Link>
+                    <Link to="/auth"><Button variant="accent" className="w-full">Sign In</Button></Link>
                   </SheetClose>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-destructive"
-                    onClick={signOut}
-                  >
+                  <Button variant="ghost" className="w-full justify-start text-destructive" onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
                   </Button>
                 )}

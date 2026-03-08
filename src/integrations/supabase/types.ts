@@ -16,12 +16,18 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          balance_due: number | null
+          booking_reference: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           created_at: string
+          deposit_amount: number | null
           end_date: string | null
           guests_count: number
           id: string
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
           phone_number: string | null
           special_requests: string | null
           start_date: string
@@ -31,12 +37,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          balance_due?: number | null
+          booking_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string
+          deposit_amount?: number | null
           end_date?: string | null
           guests_count?: number
           id?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string
           phone_number?: string | null
           special_requests?: string | null
           start_date: string
@@ -46,12 +58,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          balance_due?: number | null
+          booking_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string
+          deposit_amount?: number | null
           end_date?: string | null
           guests_count?: number
           id?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string
           phone_number?: string | null
           special_requests?: string | null
           start_date?: string
@@ -241,6 +259,7 @@ export type Database = {
           category: string
           created_at: string
           departure_date: string | null
+          deposit_percentage: number | null
           description: string | null
           destination_id: string | null
           difficulty: Database["public"]["Enums"]["tour_difficulty"]
@@ -252,6 +271,7 @@ export type Database = {
           image_url: string | null
           included: string[] | null
           is_fixed_date: boolean
+          itinerary: Json | null
           max_group_size: number
           max_total_slots: number
           price_per_person: number
@@ -266,6 +286,7 @@ export type Database = {
           category?: string
           created_at?: string
           departure_date?: string | null
+          deposit_percentage?: number | null
           description?: string | null
           destination_id?: string | null
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
@@ -277,6 +298,7 @@ export type Database = {
           image_url?: string | null
           included?: string[] | null
           is_fixed_date?: boolean
+          itinerary?: Json | null
           max_group_size?: number
           max_total_slots?: number
           price_per_person?: number
@@ -291,6 +313,7 @@ export type Database = {
           category?: string
           created_at?: string
           departure_date?: string | null
+          deposit_percentage?: number | null
           description?: string | null
           destination_id?: string | null
           difficulty?: Database["public"]["Enums"]["tour_difficulty"]
@@ -302,6 +325,7 @@ export type Database = {
           image_url?: string | null
           included?: string[] | null
           is_fixed_date?: boolean
+          itinerary?: Json | null
           max_group_size?: number
           max_total_slots?: number
           price_per_person?: number
