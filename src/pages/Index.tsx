@@ -11,8 +11,15 @@ import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-safari.jpg";
 import { formatKES } from "@/lib/formatKES";
 import { format } from "date-fns";
+import useSEO from "@/hooks/useSEO";
 
 const Index = () => {
+  useSEO({
+    title: "Songa Travel & Tours — Premium African Tourism",
+    description: "Discover Africa's hidden wonders with curated safari tours, road trips, and cultural experiences across Kenya and East Africa. Book your adventure today.",
+    ogImage: heroImage,
+  });
+
   const { data: tours, isLoading } = useTours();
   const { data: roadTrips } = useTours(undefined, "roadtrip");
   const { data: trendingDestinations } = useTrendingDestinations();

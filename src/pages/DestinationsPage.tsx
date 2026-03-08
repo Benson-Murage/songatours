@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { X, SlidersHorizontal, Search } from "lucide-react";
+import useSEO from "@/hooks/useSEO";
 import Layout from "@/components/Layout";
 import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
@@ -10,7 +11,7 @@ import { useTours, useDestinations } from "@/hooks/useTours";
 import { useState, useMemo } from "react";
 
 const CATEGORIES = [
-  { value: "", label: "All Categories" },
+  { value: "all", label: "All Categories" },
   { value: "safari", label: "Safari" },
   { value: "roadtrip", label: "Road Trip" },
   { value: "hike", label: "Hiking" },
@@ -20,21 +21,21 @@ const CATEGORIES = [
 ];
 
 const DIFFICULTIES = [
-  { value: "", label: "Any Difficulty" },
+  { value: "all", label: "Any Difficulty" },
   { value: "Easy", label: "Easy" },
   { value: "Medium", label: "Medium" },
   { value: "Hard", label: "Hard" },
 ];
 
 const DURATIONS = [
-  { value: "", label: "Any Duration" },
+  { value: "all", label: "Any Duration" },
   { value: "1-3", label: "1-3 days" },
   { value: "4-7", label: "4-7 days" },
   { value: "8+", label: "8+ days" },
 ];
 
 const PRICE_RANGES = [
-  { value: "", label: "Any Price" },
+  { value: "all", label: "Any Price" },
   { value: "0-10000", label: "Under KSh 10,000" },
   { value: "10000-30000", label: "KSh 10,000 – 30,000" },
   { value: "30000-60000", label: "KSh 30,000 – 60,000" },
@@ -42,6 +43,10 @@ const PRICE_RANGES = [
 ];
 
 const DestinationsPage = () => {
+  useSEO({
+    title: "Explore Tours",
+    description: "Browse curated African tours — safaris, road trips, hiking, beach getaways, and cultural experiences. Filter by destination, price, and difficulty.",
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSlug = searchParams.get("destination") || "";
   const guestsFilter = searchParams.get("guests") || "";
@@ -50,20 +55,21 @@ const DestinationsPage = () => {
   const durationFilter = searchParams.get("duration") || "";
   const priceFilter = searchParams.get("price") || "";
 
-  const { data: tours, isLoading, isError } = useTours(activeSlug || undefined, categoryFilter || undefined);
+  const effectiveCategory = categoryFilter && categoryFilter !== "all" ? categoryFilter : undefined;
+  const { data: tours, isLoading, isError } = useTours(activeSlug || undefined, effectiveCategory);
   const { data: destinations } = useDestinations();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTours = useMemo(() => {
     let result = tours || [];
     if (guestsFilter) result = result.filter((t) => t.max_group_size >= Number(guestsFilter));
-    if (difficultyFilter) result = result.filter((t) => t.difficulty === difficultyFilter);
-    if (durationFilter) {
+    if (difficultyFilter && difficultyFilter !== "all") result = result.filter((t) => t.difficulty === difficultyFilter);
+    if (durationFilter && durationFilter !== "all") {
       if (durationFilter === "1-3") result = result.filter((t) => t.duration_days >= 1 && t.duration_days <= 3);
       else if (durationFilter === "4-7") result = result.filter((t) => t.duration_days >= 4 && t.duration_days <= 7);
       else if (durationFilter === "8+") result = result.filter((t) => t.duration_days >= 8);
     }
-    if (priceFilter) {
+    if (priceFilter && priceFilter !== "all") {
       const effectivePrice = (t: any) => t.discount_price ?? t.price_per_person;
       if (priceFilter === "0-10000") result = result.filter((t) => effectivePrice(t) < 10000);
       else if (priceFilter === "10000-30000") result = result.filter((t) => effectivePrice(t) >= 10000 && effectivePrice(t) <= 30000);
@@ -81,13 +87,13 @@ const DestinationsPage = () => {
     return result;
   }, [tours, guestsFilter, searchQuery, difficultyFilter, durationFilter, priceFilter]);
 
-  const hasActiveFilters = !!activeSlug || !!guestsFilter || !!categoryFilter || !!difficultyFilter || !!durationFilter || !!priceFilter;
+  const hasActiveFilters = !!activeSlug || !!guestsFilter || (!!categoryFilter && categoryFilter !== "all") || (!!difficultyFilter && difficultyFilter !== "all") || (!!durationFilter && durationFilter !== "all") || (!!priceFilter && priceFilter !== "all");
 
   const clearFilters = () => { setSearchParams({}); setSearchQuery(""); };
 
   const setFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
-    if (value) params.set(key, value);
+    if (value && value !== "all") params.set(key, value);
     else params.delete(key);
     setSearchParams(params);
   };
@@ -154,28 +160,28 @@ const DestinationsPage = () => {
                 <button onClick={() => setFilter("destination", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {categoryFilter && (
+            {categoryFilter && categoryFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary capitalize">
                 {categoryFilter === "roadtrip" ? "Road Trip" : categoryFilter}
-                <button onClick={() => setFilter("category", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("category", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {difficultyFilter && (
+            {difficultyFilter && difficultyFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {difficultyFilter}
-                <button onClick={() => setFilter("difficulty", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("difficulty", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {durationFilter && (
+            {durationFilter && durationFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {durationFilter} days
-                <button onClick={() => setFilter("duration", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("duration", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
-            {priceFilter && (
+            {priceFilter && priceFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {PRICE_RANGES.find((p) => p.value === priceFilter)?.label}
-                <button onClick={() => setFilter("price", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("price", "all")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
           </div>

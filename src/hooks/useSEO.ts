@@ -1,0 +1,58 @@
+import { useEffect } from "react";
+
+interface SEOProps {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  ogType?: string;
+  canonical?: string;
+}
+
+const useSEO = ({ title, description, ogImage, ogType = "website", canonical }: SEOProps) => {
+  useEffect(() => {
+    const fullTitle = title.includes("Songa") ? title : `${title} | Songa Travel & Tours`;
+    document.title = fullTitle;
+
+    const setMeta = (name: string, content: string, attr = "name") => {
+      let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    if (description) {
+      setMeta("description", description);
+      setMeta("og:description", description, "property");
+      setMeta("twitter:description", description, "name");
+    }
+
+    setMeta("og:title", fullTitle, "property");
+    setMeta("og:type", ogType, "property");
+    setMeta("twitter:card", "summary_large_image", "name");
+    setMeta("twitter:title", fullTitle, "name");
+
+    if (ogImage) {
+      setMeta("og:image", ogImage, "property");
+      setMeta("twitter:image", ogImage, "name");
+    }
+
+    if (canonical) {
+      let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.setAttribute("rel", "canonical");
+        document.head.appendChild(link);
+      }
+      link.setAttribute("href", canonical);
+    }
+
+    return () => {
+      document.title = "Songa Travel & Tours — Premium African Tourism";
+    };
+  }, [title, description, ogImage, ogType, canonical]);
+};
+
+export default useSEO;
