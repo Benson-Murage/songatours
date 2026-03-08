@@ -1375,4 +1375,342 @@ const ManageImagesDialog = ({ tour }: { tour: any }) => {
   );
 };
 
+/* ─── Customers Tab ────────────────────────────────────────────────── */
+const CustomersTab = ({ bookings }: { bookings: any[] }) => {
+  const [search, setSearch] = useState("");
+  const customers = useMemo(() => {
+    const map: Record<string, any> = {};
+    bookings.forEach((b: any) => {
+      const uid = b.user_id;
+      if (!map[uid]) {
+        map[uid] = {
+          id: uid,
+          name: b.bookedByProfile?.full_name || "Unknown",
+          email: b.bookedByProfile?.email || "",
+          phone: b.phone_number || b.bookedByProfile?.phone || "",
+          totalBookings: 0,
+          totalSpent: 0,
+          cancellations: 0,
+          firstBooking: b.created_at,
+        };
+      }
+      map[uid].totalBookings++;
+      if (b.status === "cancelled") map[uid].cancellations++;
+      else map[uid].totalSpent += Number(b.total_price);
+      if (b.created_at < map[uid].firstBooking) map[uid].firstBooking = b.created_at;
+    });
+    return Object.values(map);
+  }, [bookings]);
+
+  const filtered = search.trim()
+    ? customers.filter((c: any) => `${c.name} ${c.email} ${c.phone}`.toLowerCase().includes(search.toLowerCase()))
+    : customers;
+
+  const exportCustomersCSV = () => {
+    const headers = ["Name", "Email", "Phone", "Total Bookings", "Total Spent", "Cancellations"];
+    const rows = filtered.map((c: any) => [c.name, c.email, c.phone, c.totalBookings, c.totalSpent, c.cancellations]);
+    const csv = [headers.join(","), ...rows.map((r: any) => r.map((v: any) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `customers-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Customers exported");
+  };
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input className="pl-9" placeholder="Search customers..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCustomersCSV} disabled={filtered.length === 0}>
+          <Download className="mr-1 h-4 w-4" /> Export CSV
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground">{filtered.length} customer{filtered.length !== 1 ? "s" : ""}</p>
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
+        <table className="w-full min-w-[800px] text-sm">
+          <thead className="bg-muted/50">
+            <tr className="text-left">
+              <th className="px-4 py-3 font-medium">Customer</th>
+              <th className="px-4 py-3 font-medium">Email</th>
+              <th className="px-4 py-3 font-medium">Phone</th>
+              <th className="px-4 py-3 font-medium">Bookings</th>
+              <th className="px-4 py-3 font-medium">Total Spent</th>
+              <th className="px-4 py-3 font-medium">Cancellations</th>
+              <th className="px-4 py-3 font-medium">Since</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((c: any) => (
+              <tr key={c.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                <td className="px-4 py-3 font-medium">{c.name}</td>
+                <td className="px-4 py-3 text-muted-foreground text-xs">{c.email}</td>
+                <td className="px-4 py-3 text-xs">{c.phone || "—"}</td>
+                <td className="px-4 py-3">{c.totalBookings}</td>
+                <td className="px-4 py-3 font-medium">{formatKES(c.totalSpent)}</td>
+                <td className="px-4 py-3">{c.cancellations}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(c.firstBooking).toLocaleDateString()}</td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No customers found</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+};
+
+/* ─── Discount Codes Tab ───────────────────────────────────────────── */
+const DiscountCodesTab = ({ tours }: { tours: any[] }) => {
+  const { data: codes, isLoading } = useDiscountCodes();
+  const createCode = useCreateDiscountCode();
+  const toggleCode = useToggleDiscountCode();
+  const deleteCode = useDeleteDiscountCode();
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({
+    code: "", discount_type: "percentage", discount_value: "", max_uses: "", applicable_tour_id: "", expires_at: "",
+  });
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.code.trim() || !form.discount_value) { toast.error("Code and value are required"); return; }
+    createCode.mutate({
+      code: form.code,
+      discount_type: form.discount_type,
+      discount_value: Number(form.discount_value),
+      max_uses: form.max_uses ? Number(form.max_uses) : null,
+      applicable_tour_id: form.applicable_tour_id || null,
+      expires_at: form.expires_at || null,
+    }, {
+      onSuccess: () => {
+        toast.success("Promo code created");
+        setShowCreate(false);
+        setForm({ code: "", discount_type: "percentage", discount_value: "", max_uses: "", applicable_tour_id: "", expires_at: "" });
+      },
+      onError: () => toast.error("Failed to create code — it may already exist"),
+    });
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{codes?.length || 0} promo codes</p>
+        <Button variant="accent" size="sm" onClick={() => setShowCreate(!showCreate)}>
+          <Plus className="mr-1 h-4 w-4" /> Create Code
+        </Button>
+      </div>
+
+      {showCreate && (
+        <form onSubmit={handleCreate} className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label>Code *</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SONGA10" /></div>
+            <div className="space-y-1.5"><Label>Type</Label>
+              <Select value={form.discount_type} onValueChange={(v) => setForm({ ...form, discount_type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage (%)</SelectItem>
+                  <SelectItem value="fixed">Fixed (KSh)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5"><Label>Value *</Label><Input type="number" min="1" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: e.target.value })} placeholder={form.discount_type === "percentage" ? "10" : "5000"} /></div>
+            <div className="space-y-1.5"><Label>Max Uses</Label><Input type="number" min="1" value={form.max_uses} onChange={(e) => setForm({ ...form, max_uses: e.target.value })} placeholder="Unlimited" /></div>
+            <div className="space-y-1.5"><Label>Expires</Label><Input type="date" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })} /></div>
+          </div>
+          <div className="space-y-1.5"><Label>Applicable Tour (optional)</Label>
+            <Select value={form.applicable_tour_id} onValueChange={(v) => setForm({ ...form, applicable_tour_id: v })}>
+              <SelectTrigger><SelectValue placeholder="All tours" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All tours</SelectItem>
+                {tours.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit" variant="accent" size="sm" disabled={createCode.isPending}>
+            {createCode.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create
+          </Button>
+        </form>
+      )}
+
+      {isLoading ? <Skeleton className="h-32 rounded-xl" /> : (
+        <div className="space-y-2">
+          {(codes || []).map((dc: any) => (
+            <div key={dc.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+              <div>
+                <p className="font-mono font-bold text-foreground">{dc.code}</p>
+                <p className="text-xs text-muted-foreground">
+                  {dc.discount_type === "percentage" ? `${dc.discount_value}% off` : `${formatKES(dc.discount_value)} off`}
+                  {dc.max_uses ? ` • ${dc.times_used}/${dc.max_uses} used` : ` • ${dc.times_used} used`}
+                  {dc.expires_at ? ` • Expires ${new Date(dc.expires_at).toLocaleDateString()}` : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={dc.is_active} onCheckedChange={(v) => toggleCode.mutate({ id: dc.id, is_active: v })} />
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteCode.mutate(dc.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+          {(!codes || codes.length === 0) && <p className="text-muted-foreground text-center py-8">No promo codes yet.</p>}
+        </div>
+      )}
+    </>
+  );
+};
+
+/* ─── Referrals Tab ────────────────────────────────────────────────── */
+const ReferralsTab = () => {
+  const { data: referrals, isLoading } = useAllReferrals();
+  const stats = useMemo(() => {
+    if (!referrals) return { total: 0, completed: 0, revenue: 0 };
+    const completed = referrals.filter((r: any) => r.status === "completed");
+    return {
+      total: referrals.length,
+      completed: completed.length,
+      revenue: completed.reduce((s: number, r: any) => s + Number(r.reward_amount), 0),
+    };
+  }, [referrals]);
+
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+          <p className="text-xs text-muted-foreground">Total Referrals</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <p className="text-2xl font-bold text-primary">{stats.completed}</p>
+          <p className="text-xs text-muted-foreground">Completed</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <p className="text-2xl font-bold text-accent">{formatKES(stats.revenue)}</p>
+          <p className="text-xs text-muted-foreground">Total Rewards</p>
+        </div>
+      </div>
+      {isLoading ? <Skeleton className="h-32 rounded-xl" /> : (
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
+            <thead className="bg-muted/50">
+              <tr className="text-left">
+                <th className="px-4 py-3 font-medium">Code</th>
+                <th className="px-4 py-3 font-medium">Referred Email</th>
+                <th className="px-4 py-3 font-medium">Reward</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(referrals || []).map((r: any) => (
+                <tr key={r.id} className="border-t border-border">
+                  <td className="px-4 py-3 font-mono text-xs">{r.referral_code}</td>
+                  <td className="px-4 py-3 text-xs">{r.referred_email || "—"}</td>
+                  <td className="px-4 py-3 font-medium">{formatKES(r.reward_amount)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.status === "completed" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+              {(!referrals || referrals.length === 0) && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No referrals yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+};
+
+/* ─── Analytics Tab ────────────────────────────────────────────────── */
+const AnalyticsTab = ({ bookings, tours }: { bookings: any[]; tours: any[] }) => {
+  const monthlyRevenue = useMemo(() => {
+    const map: Record<string, number> = {};
+    bookings.forEach((b: any) => {
+      if (b.status === "cancelled") return;
+      const month = new Date(b.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short" });
+      map[month] = (map[month] || 0) + Number(b.total_price);
+    });
+    return Object.entries(map).slice(-12).map(([month, revenue]) => ({ month, revenue }));
+  }, [bookings]);
+
+  const popularTours = useMemo(() => {
+    const map: Record<string, { title: string; count: number; revenue: number }> = {};
+    bookings.forEach((b: any) => {
+      if (b.status === "cancelled") return;
+      const title = b.tours?.title || "Unknown";
+      if (!map[b.tour_id]) map[b.tour_id] = { title, count: 0, revenue: 0 };
+      map[b.tour_id].count++;
+      map[b.tour_id].revenue += Number(b.total_price);
+    });
+    return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 5);
+  }, [bookings]);
+
+  const thisMonth = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short" });
+  const thisMonthRevenue = monthlyRevenue.find((m) => m.month === thisMonth)?.revenue || 0;
+  const totalRevenue = bookings.filter((b: any) => b.status !== "cancelled").reduce((s: number, b: any) => s + Number(b.total_price), 0);
+  const avgBookingValue = bookings.length > 0 ? totalRevenue / bookings.filter((b: any) => b.status !== "cancelled").length : 0;
+
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-xs text-muted-foreground">Revenue This Month</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{formatKES(thisMonthRevenue)}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-xs text-muted-foreground">Total Revenue</p>
+          <p className="text-2xl font-bold text-primary mt-1">{formatKES(totalRevenue)}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-xs text-muted-foreground">Avg Booking Value</p>
+          <p className="text-2xl font-bold text-accent mt-1">{formatKES(avgBookingValue)}</p>
+        </div>
+      </div>
+
+      {monthlyRevenue.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="font-semibold mb-4">Monthly Revenue</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={monthlyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(value: number) => [formatKES(value), "Revenue"]} />
+              <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-semibold mb-4">Most Popular Tours</h3>
+        {popularTours.length > 0 ? (
+          <div className="space-y-3">
+            {popularTours.map((t, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">{t.title}</p>
+                  <p className="text-xs text-muted-foreground">{t.count} booking{t.count > 1 ? "s" : ""}</p>
+                </div>
+                <span className="font-bold text-sm">{formatKES(t.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-muted-foreground text-sm">No booking data yet.</p>}
+      </div>
+    </>
+  );
+};
+
 export default AdminDashboard;
