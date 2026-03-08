@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { X, SlidersHorizontal, Search } from "lucide-react";
+import useSEO from "@/hooks/useSEO";
 import Layout from "@/components/Layout";
 import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
