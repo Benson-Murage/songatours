@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFavorites, useToggleFavorite } from "@/hooks/useTours";
 import type { Tour } from "@/hooks/useTours";
 import { toast } from "sonner";
+import { formatKES } from "@/lib/formatKES";
 
 interface TourCardProps {
   tour: Tour;
@@ -96,15 +97,15 @@ const TourCard = ({ tour }: TourCardProps) => {
               {hasDiscount ? (
                 <>
                   <span className="text-sm text-muted-foreground line-through mr-1">
-                    ${Number(tour.price_per_person).toLocaleString()}
+                    {formatKES(tour.price_per_person)}
                   </span>
                   <span className="text-lg font-bold text-accent">
-                    ${Number(tour.discount_price).toLocaleString()}
+                    {formatKES(tour.discount_price!)}
                   </span>
                 </>
               ) : (
                 <span className="text-lg font-bold text-foreground">
-                  ${Number(tour.price_per_person).toLocaleString()}
+                  {formatKES(tour.price_per_person)}
                 </span>
               )}
               <span className="text-xs text-muted-foreground"> / person</span>

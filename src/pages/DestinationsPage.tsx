@@ -5,22 +5,70 @@ import TourCard from "@/components/TourCard";
 import TourCardSkeleton from "@/components/TourCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTours, useDestinations } from "@/hooks/useTours";
 import { useState, useMemo } from "react";
+
+const CATEGORIES = [
+  { value: "", label: "All Categories" },
+  { value: "safari", label: "Safari" },
+  { value: "roadtrip", label: "Road Trip" },
+  { value: "hike", label: "Hiking" },
+  { value: "international", label: "International" },
+  { value: "beach", label: "Beach" },
+  { value: "cultural", label: "Cultural" },
+];
+
+const DIFFICULTIES = [
+  { value: "", label: "Any Difficulty" },
+  { value: "Easy", label: "Easy" },
+  { value: "Medium", label: "Medium" },
+  { value: "Hard", label: "Hard" },
+];
+
+const DURATIONS = [
+  { value: "", label: "Any Duration" },
+  { value: "1-3", label: "1-3 days" },
+  { value: "4-7", label: "4-7 days" },
+  { value: "8+", label: "8+ days" },
+];
+
+const PRICE_RANGES = [
+  { value: "", label: "Any Price" },
+  { value: "0-10000", label: "Under KSh 10,000" },
+  { value: "10000-30000", label: "KSh 10,000 – 30,000" },
+  { value: "30000-60000", label: "KSh 30,000 – 60,000" },
+  { value: "60000+", label: "KSh 60,000+" },
+];
 
 const DestinationsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSlug = searchParams.get("destination") || "";
   const guestsFilter = searchParams.get("guests") || "";
   const categoryFilter = searchParams.get("category") || "";
+  const difficultyFilter = searchParams.get("difficulty") || "";
+  const durationFilter = searchParams.get("duration") || "";
+  const priceFilter = searchParams.get("price") || "";
+
   const { data: tours, isLoading, isError } = useTours(activeSlug || undefined, categoryFilter || undefined);
   const { data: destinations } = useDestinations();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTours = useMemo(() => {
     let result = tours || [];
-    if (guestsFilter) {
-      result = result.filter((t) => t.max_group_size >= Number(guestsFilter));
+    if (guestsFilter) result = result.filter((t) => t.max_group_size >= Number(guestsFilter));
+    if (difficultyFilter) result = result.filter((t) => t.difficulty === difficultyFilter);
+    if (durationFilter) {
+      if (durationFilter === "1-3") result = result.filter((t) => t.duration_days >= 1 && t.duration_days <= 3);
+      else if (durationFilter === "4-7") result = result.filter((t) => t.duration_days >= 4 && t.duration_days <= 7);
+      else if (durationFilter === "8+") result = result.filter((t) => t.duration_days >= 8);
+    }
+    if (priceFilter) {
+      const effectivePrice = (t: any) => t.discount_price ?? t.price_per_person;
+      if (priceFilter === "0-10000") result = result.filter((t) => effectivePrice(t) < 10000);
+      else if (priceFilter === "10000-30000") result = result.filter((t) => effectivePrice(t) >= 10000 && effectivePrice(t) <= 30000);
+      else if (priceFilter === "30000-60000") result = result.filter((t) => effectivePrice(t) >= 30000 && effectivePrice(t) <= 60000);
+      else if (priceFilter === "60000+") result = result.filter((t) => effectivePrice(t) >= 60000);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -31,16 +79,16 @@ const DestinationsPage = () => {
       );
     }
     return result;
-  }, [tours, guestsFilter, searchQuery]);
+  }, [tours, guestsFilter, searchQuery, difficultyFilter, durationFilter, priceFilter]);
 
-  const hasActiveFilters = !!activeSlug || !!guestsFilter || !!categoryFilter;
+  const hasActiveFilters = !!activeSlug || !!guestsFilter || !!categoryFilter || !!difficultyFilter || !!durationFilter || !!priceFilter;
 
   const clearFilters = () => { setSearchParams({}); setSearchQuery(""); };
 
-  const setDestFilter = (slug: string) => {
+  const setFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
-    if (slug) params.set("destination", slug);
-    else params.delete("destination");
+    if (value) params.set(key, value);
+    else params.delete(key);
     setSearchParams(params);
   };
 
@@ -57,15 +105,43 @@ const DestinationsPage = () => {
         </div>
         <p className="text-muted-foreground mb-6">Find your perfect African adventure</p>
 
-        {/* Search */}
-        <div className="relative mb-4 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Search tours..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        {/* Search + Filters */}
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Search tours..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Select value={categoryFilter} onValueChange={(v) => setFilter("category", v)}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => <SelectItem key={c.value || "all"} value={c.value}>{c.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={difficultyFilter} onValueChange={(v) => setFilter("difficulty", v)}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Difficulty" /></SelectTrigger>
+              <SelectContent>
+                {DIFFICULTIES.map((d) => <SelectItem key={d.value || "all"} value={d.value}>{d.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={durationFilter} onValueChange={(v) => setFilter("duration", v)}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Duration" /></SelectTrigger>
+              <SelectContent>
+                {DURATIONS.map((d) => <SelectItem key={d.value || "all"} value={d.value}>{d.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={priceFilter} onValueChange={(v) => setFilter("price", v)}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="Price Range" /></SelectTrigger>
+              <SelectContent>
+                {PRICE_RANGES.map((p) => <SelectItem key={p.value || "all"} value={p.value}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Active filter badges */}
@@ -75,19 +151,31 @@ const DestinationsPage = () => {
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 <SlidersHorizontal className="h-3 w-3" />
                 {destinations?.find((d) => d.slug === activeSlug)?.name || activeSlug}
-                <button onClick={() => setDestFilter("")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
-              </span>
-            )}
-            {guestsFilter && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                {guestsFilter}+ guests
-                <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete("guests"); setSearchParams(p); }} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                <button onClick={() => setFilter("destination", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
             {categoryFilter && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary capitalize">
-                {categoryFilter}
-                <button onClick={() => { const p = new URLSearchParams(searchParams); p.delete("category"); setSearchParams(p); }} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+                {categoryFilter === "roadtrip" ? "Road Trip" : categoryFilter}
+                <button onClick={() => setFilter("category", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+              </span>
+            )}
+            {difficultyFilter && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                {difficultyFilter}
+                <button onClick={() => setFilter("difficulty", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+              </span>
+            )}
+            {durationFilter && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                {durationFilter} days
+                <button onClick={() => setFilter("duration", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
+              </span>
+            )}
+            {priceFilter && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                {PRICE_RANGES.find((p) => p.value === priceFilter)?.label}
+                <button onClick={() => setFilter("price", "")} className="ml-1 hover:text-primary/70"><X className="h-3 w-3" /></button>
               </span>
             )}
           </div>
@@ -96,7 +184,7 @@ const DestinationsPage = () => {
         {/* Destination chips */}
         <div className="mb-8 flex flex-wrap gap-2">
           <button
-            onClick={() => setDestFilter("")}
+            onClick={() => setFilter("destination", "")}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               !activeSlug ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
             }`}
@@ -106,7 +194,7 @@ const DestinationsPage = () => {
           {destinations?.map((d) => (
             <button
               key={d.id}
-              onClick={() => setDestFilter(d.slug)}
+              onClick={() => setFilter("destination", d.slug)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 activeSlug === d.slug ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               }`}
@@ -124,17 +212,13 @@ const DestinationsPage = () => {
           </div>
         ) : isLoading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <TourCardSkeleton key={i} />
-            ))}
+            {Array.from({ length: 8 }).map((_, i) => <TourCardSkeleton key={i} />)}
           </div>
         ) : filteredTours.length > 0 ? (
           <>
             <p className="text-sm text-muted-foreground mb-4">{filteredTours.length} tour{filteredTours.length > 1 ? "s" : ""} found</p>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredTours.map((tour) => (
-                <TourCard key={tour.id} tour={tour} />
-              ))}
+              {filteredTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
             </div>
           </>
         ) : (
