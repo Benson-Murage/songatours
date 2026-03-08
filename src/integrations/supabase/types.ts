@@ -22,6 +22,8 @@ export type Database = {
           cancelled_by: string | null
           created_at: string
           deposit_amount: number | null
+          discount_amount: number | null
+          discount_code: string | null
           end_date: string | null
           guests_count: number
           id: string
@@ -29,6 +31,7 @@ export type Database = {
           payment_reference: string | null
           payment_status: string
           phone_number: string | null
+          referral_code: string | null
           special_requests: string | null
           start_date: string
           status: Database["public"]["Enums"]["booking_status"]
@@ -43,6 +46,8 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string
           deposit_amount?: number | null
+          discount_amount?: number | null
+          discount_code?: string | null
           end_date?: string | null
           guests_count?: number
           id?: string
@@ -50,6 +55,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: string
           phone_number?: string | null
+          referral_code?: string | null
           special_requests?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -64,6 +70,8 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string
           deposit_amount?: number | null
+          discount_amount?: number | null
+          discount_code?: string | null
           end_date?: string | null
           guests_count?: number
           id?: string
@@ -71,6 +79,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: string
           phone_number?: string | null
+          referral_code?: string | null
           special_requests?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -121,6 +130,53 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_codes: {
+        Row: {
+          applicable_tour_id: string | null
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          times_used: number
+        }
+        Insert: {
+          applicable_tour_id?: string | null
+          code: string
+          created_at?: string
+          discount_type?: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          times_used?: number
+        }
+        Update: {
+          applicable_tour_id?: string | null
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          times_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_codes_applicable_tour_id_fkey"
+            columns: ["applicable_tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -156,9 +212,11 @@ export type Database = {
           bio: string | null
           created_at: string
           email: string | null
+          emergency_contact: string | null
           full_name: string | null
           id: string
           is_admin: boolean | null
+          nationality: string | null
           phone: string | null
           updated_at: string
         }
@@ -167,9 +225,11 @@ export type Database = {
           bio?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          nationality?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -178,13 +238,56 @@ export type Database = {
           bio?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          nationality?: string | null
           phone?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referral_code: string
+          referred_booking_id: string | null
+          referred_email: string | null
+          referrer_id: string
+          reward_amount: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_booking_id?: string | null
+          referred_email?: string | null
+          referrer_id: string
+          reward_amount?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_booking_id?: string | null
+          referred_email?: string | null
+          referrer_id?: string
+          reward_amount?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_booking_id_fkey"
+            columns: ["referred_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
