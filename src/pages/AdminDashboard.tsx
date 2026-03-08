@@ -358,9 +358,13 @@ const AdminDashboard = () => {
         )}
 
         <Tabs defaultValue="tours" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="tours">Tour Management</TabsTrigger>
+          <TabsList className="flex-wrap">
+            <TabsTrigger value="tours">Tours</TabsTrigger>
             <TabsTrigger value="bookings">Bookings CRM</TabsTrigger>
+            <TabsTrigger value="customers">Customers</TabsTrigger>
+            <TabsTrigger value="discounts">Promo Codes</TabsTrigger>
+            <TabsTrigger value="referrals">Referrals</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="destinations">Destinations</TabsTrigger>
           </TabsList>
 
