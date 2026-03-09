@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, Loader2,
   CheckCircle2, Heart, ShieldCheck, Phone, XCircle, AlertTriangle, MessageCircle,
@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import ParticipantForms, { type Participant } from "@/components/ParticipantForms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,6 +58,8 @@ const TourDetailPage = () => {
   const [whatsappModal, setWhatsappModal] = useState<string | null>(null);
   const [bookingRef, setBookingRef] = useState<string | null>(null);
   const [bookingSummary, setBookingSummary] = useState<any>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const handleParticipantsChange = useCallback((p: Participant[]) => setParticipants(p), []);
 
   const effectiveStartDate = tour?.is_fixed_date && tour?.departure_date
     ? tour.departure_date
@@ -131,6 +134,12 @@ const TourDetailPage = () => {
     if (capacity && guests > capacity.remaining) newErrors.guests = `Only ${capacity.remaining} spot(s) left`;
     if (!phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
     else if (!/^[+\d\s\-()]{7,24}$/.test(phoneNumber.trim())) newErrors.phoneNumber = "Enter a valid phone number";
+    // Validate participants
+    participants.forEach((p, i) => {
+      if (!p.full_name.trim()) newErrors[`p${i}_name`] = "Name required";
+      if (!p.phone_number.trim()) newErrors[`p${i}_phone`] = "Phone required";
+      else if (!/^[+\d\s\-()]{7,24}$/.test(p.phone_number.trim())) newErrors[`p${i}_phone`] = "Invalid phone";
+    });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -178,6 +187,21 @@ const TourDetailPage = () => {
       if (error || data?.error) {
         toast.error(data?.error || "Booking failed. Please try again.");
       } else {
+        // Save participants
+        const bookingId = data?.booking?.id;
+        if (bookingId && participants.length > 0) {
+          const participantRows = participants.map((p) => ({
+            booking_id: bookingId,
+            full_name: p.full_name.trim(),
+            phone_number: p.phone_number.trim(),
+            email: p.email.trim() || null,
+            nationality: p.nationality.trim() || null,
+            emergency_contact: p.emergency_contact.trim() || null,
+            dietary_requirements: p.dietary_requirements.trim() || null,
+          }));
+          await (supabase as any).from("participants").insert(participantRows);
+        }
+
         toast.success("Booking confirmed!");
         setBookingSummary({
           reference: data?.booking?.booking_reference || null,
@@ -688,6 +712,9 @@ const TourDetailPage = () => {
                       placeholder="e.g. REF-SONGA-XXXX"
                     />
                   </div>
+
+                  {/* Participant Details */}
+                  <ParticipantForms guestCount={guests} onChange={handleParticipantsChange} errors={errors} />
                 </div>
               )}
 

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
   Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download, QrCode, CalendarDays,
-  Tag, Gift, UserCircle, TrendingUp, BarChart3,
+  Tag, Gift, UserCircle, TrendingUp, BarChart3, ClipboardList,
 } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
 import { QRCodeSVG } from "qrcode.react";
@@ -14,6 +14,7 @@ import { useAllReferrals } from "@/hooks/useReferrals";
 import InvoiceDownload from "@/components/InvoiceDownload";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import Layout from "@/components/Layout";
+import TourManifest from "@/components/admin/TourManifest";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -364,6 +365,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="discounts">Promo Codes</TabsTrigger>
             <TabsTrigger value="referrals">Referrals</TabsTrigger>
+            <TabsTrigger value="participants">Participants</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="destinations">Destinations</TabsTrigger>
           </TabsList>
@@ -684,6 +686,11 @@ const AdminDashboard = () => {
           {/* ── REFERRALS TAB ── */}
           <TabsContent value="referrals" className="space-y-4">
             <ReferralsTab />
+          </TabsContent>
+
+          {/* ── PARTICIPANTS & MANIFEST TAB ── */}
+          <TabsContent value="participants" className="space-y-4">
+            <TourManifest tours={adminTours || []} />
           </TabsContent>
 
           {/* ── ANALYTICS TAB ── */}
