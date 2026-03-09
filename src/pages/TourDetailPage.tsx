@@ -134,6 +134,12 @@ const TourDetailPage = () => {
     if (capacity && guests > capacity.remaining) newErrors.guests = `Only ${capacity.remaining} spot(s) left`;
     if (!phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
     else if (!/^[+\d\s\-()]{7,24}$/.test(phoneNumber.trim())) newErrors.phoneNumber = "Enter a valid phone number";
+    // Validate participants
+    participants.forEach((p, i) => {
+      if (!p.full_name.trim()) newErrors[`p${i}_name`] = "Name required";
+      if (!p.phone_number.trim()) newErrors[`p${i}_phone`] = "Phone required";
+      else if (!/^[+\d\s\-()]{7,24}$/.test(p.phone_number.trim())) newErrors[`p${i}_phone`] = "Invalid phone";
+    });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
