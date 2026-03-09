@@ -206,6 +206,50 @@ export type Database = {
           },
         ]
       }
+      participants: {
+        Row: {
+          booking_id: string
+          created_at: string
+          dietary_requirements: string | null
+          email: string | null
+          emergency_contact: string | null
+          full_name: string
+          id: string
+          nationality: string | null
+          phone_number: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          dietary_requirements?: string | null
+          email?: string | null
+          emergency_contact?: string | null
+          full_name: string
+          id?: string
+          nationality?: string | null
+          phone_number: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          dietary_requirements?: string | null
+          email?: string | null
+          emergency_contact?: string | null
+          full_name?: string
+          id?: string
+          nationality?: string | null
+          phone_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participants_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
