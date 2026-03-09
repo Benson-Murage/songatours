@@ -58,6 +58,8 @@ const TourDetailPage = () => {
   const [whatsappModal, setWhatsappModal] = useState<string | null>(null);
   const [bookingRef, setBookingRef] = useState<string | null>(null);
   const [bookingSummary, setBookingSummary] = useState<any>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const handleParticipantsChange = useCallback((p: Participant[]) => setParticipants(p), []);
 
   const effectiveStartDate = tour?.is_fixed_date && tour?.departure_date
     ? tour.departure_date
