@@ -688,6 +688,11 @@ const AdminDashboard = () => {
             <ReferralsTab />
           </TabsContent>
 
+          {/* ── PARTICIPANTS & MANIFEST TAB ── */}
+          <TabsContent value="participants" className="space-y-4">
+            <TourManifest tours={adminTours || []} />
+          </TabsContent>
+
           {/* ── ANALYTICS TAB ── */}
           <TabsContent value="analytics" className="space-y-4">
             <AnalyticsTab bookings={adminBookings || []} tours={adminTours || []} />
