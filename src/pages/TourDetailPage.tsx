@@ -712,6 +712,9 @@ const TourDetailPage = () => {
                       placeholder="e.g. REF-SONGA-XXXX"
                     />
                   </div>
+
+                  {/* Participant Details */}
+                  <ParticipantForms guestCount={guests} onChange={handleParticipantsChange} errors={errors} />
                 </div>
               )}
 
