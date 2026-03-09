@@ -21,19 +21,23 @@ const TourManifest = ({ tours }: Props) => {
   const { data: participants, isLoading } = useQuery({
     queryKey: ["admin-participants", selectedTour, selectedDate],
     queryFn: async () => {
-      let query = supabase
-        .from("participants" as any)
-        .select("*, bookings!inner(id, booking_reference, start_date, guests_count, status, phone_number, special_requests, tour_id, tours!inner(title, destinations(name)))")
-        .in("bookings.status" as any, ["pending", "paid"]);
+      // Use raw rpc-style query to avoid deep type instantiation
+      const params: Record<string, string> = {};
+      let selectStr = "*, bookings!inner(id, booking_reference, start_date, guests_count, status, phone_number, special_requests, tour_id, tours!inner(title, destinations(name)))";
+
+      let query = (supabase as any)
+        .from("participants")
+        .select(selectStr)
+        .in("bookings.status", ["pending", "paid"]);
 
       if (selectedTour !== "all") {
-        query = query.eq("bookings.tour_id" as any, selectedTour);
+        query = query.eq("bookings.tour_id", selectedTour);
       }
       if (selectedDate) {
-        query = query.eq("bookings.start_date" as any, selectedDate);
+        query = query.eq("bookings.start_date", selectedDate);
       }
 
-      const { data, error } = await query.order("created_at" as any, { ascending: true });
+      const { data, error } = await query.order("created_at", { ascending: true });
       if (error) throw error;
       return (data || []) as any[];
     },
