@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
   Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download, QrCode, CalendarDays,
-  Tag, Gift, UserCircle, TrendingUp, BarChart3,
+  Tag, Gift, UserCircle, TrendingUp, BarChart3, ClipboardList,
 } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
 import { QRCodeSVG } from "qrcode.react";
