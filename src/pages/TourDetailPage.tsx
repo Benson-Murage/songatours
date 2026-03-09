@@ -187,6 +187,21 @@ const TourDetailPage = () => {
       if (error || data?.error) {
         toast.error(data?.error || "Booking failed. Please try again.");
       } else {
+        // Save participants
+        const bookingId = data?.booking?.id;
+        if (bookingId && participants.length > 0) {
+          const participantRows = participants.map((p) => ({
+            booking_id: bookingId,
+            full_name: p.full_name.trim(),
+            phone_number: p.phone_number.trim(),
+            email: p.email.trim() || null,
+            nationality: p.nationality.trim() || null,
+            emergency_contact: p.emergency_contact.trim() || null,
+            dietary_requirements: p.dietary_requirements.trim() || null,
+          }));
+          await (supabase as any).from("participants").insert(participantRows);
+        }
+
         toast.success("Booking confirmed!");
         setBookingSummary({
           reference: data?.booking?.booking_reference || null,
