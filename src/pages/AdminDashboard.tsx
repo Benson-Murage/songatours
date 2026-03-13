@@ -608,6 +608,7 @@ const AdminDashboard = () => {
                       <th className="px-4 py-3 font-medium">Total</th>
                       <th className="px-4 py-3 font-medium">Start</th>
                       <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Payment</th>
                       <th className="px-4 py-3 font-medium">Cancelled By</th>
                       <th className="px-4 py-3 font-medium">Booked</th>
                       <th className="px-4 py-3 font-medium">Actions</th>
