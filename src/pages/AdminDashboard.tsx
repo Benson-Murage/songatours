@@ -814,6 +814,11 @@ const AdminDashboard = () => {
             <AnalyticsTab bookings={adminBookings || []} tours={adminTours || []} />
           </TabsContent>
 
+          {/* ── PAYMENT HISTORY TAB ── */}
+          <TabsContent value="payment-history" className="space-y-4">
+            <PaymentHistoryTab />
+          </TabsContent>
+
         </Tabs>
       </div>
 
