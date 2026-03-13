@@ -319,12 +319,19 @@ const AdminDashboard = () => {
   });
 
   const confirmPaymentMut = useMutation({
-    mutationFn: async ({ bookingId, amount, method, reference, totalPrice }: {
-      bookingId: string; amount: number; method: string; reference: string; totalPrice: number;
+    mutationFn: async ({ bookingId, amount, method, reference, totalPrice, reason, isEdit }: {
+      bookingId: string; amount: number; method: string; reference: string; totalPrice: number; reason: string; isEdit: boolean;
     }) => {
-      const newPaymentStatus = amount >= totalPrice ? "paid" : "partial";
-      const newBookingStatus = amount >= totalPrice ? "paid" : "pending";
-      const balanceDue = Math.max(0, totalPrice - amount);
+      const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
+      const oldDepositAmount = Number(booking?.deposit_amount || 0);
+      const oldPaymentStatus = booking?.payment_status || "pending";
+      const oldPaymentMethod = booking?.payment_method || null;
+
+      const newTotalPaid = isEdit ? amount : oldDepositAmount + amount;
+      const overpayment = Math.max(0, newTotalPaid - totalPrice);
+      const newPaymentStatus = newTotalPaid >= totalPrice ? "paid" : newTotalPaid > 0 ? "partial" : "pending";
+      const newBookingStatus = newTotalPaid >= totalPrice ? "paid" : "pending";
+      const balanceDue = Math.max(0, totalPrice - newTotalPaid);
 
       const { error } = await supabase
         .from("bookings")
@@ -332,15 +339,25 @@ const AdminDashboard = () => {
           payment_status: newPaymentStatus,
           payment_method: method,
           payment_reference: reference || null,
-          deposit_amount: amount,
+          deposit_amount: newTotalPaid,
           balance_due: balanceDue,
           status: newBookingStatus as any,
         } as any)
         .eq("id", bookingId);
       if (error) throw error;
 
-      // Send payment confirmation email (fire and forget)
-      const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
+      await supabase.from("payment_audit_logs" as any).insert({
+        booking_id: bookingId,
+        admin_user_id: user!.id,
+        old_amount_paid: oldDepositAmount,
+        new_amount_paid: newTotalPaid,
+        old_payment_status: oldPaymentStatus,
+        new_payment_status: newPaymentStatus,
+        old_payment_method: oldPaymentMethod,
+        new_payment_method: method,
+        change_reason: reason || (isEdit ? "Payment correction" : "Payment recorded"),
+      });
+
       if (booking?.bookedByProfile?.email) {
         supabase.functions.invoke("send-booking-email", {
           body: {
@@ -357,11 +374,18 @@ const AdminDashboard = () => {
           },
         }).catch(() => {});
       }
+
+      return { overpayment };
     },
-    onSuccess: () => {
-      toast.success("Payment confirmed");
+    onSuccess: (result) => {
+      if (result.overpayment > 0) {
+        toast.success(`Payment confirmed. Overpayment of ${formatKES(result.overpayment)} noted.`);
+      } else {
+        toast.success("Payment confirmed");
+      }
       setPaymentBooking(null);
       setPaymentForm({ amount: "", method: "mpesa", reference: "", reason: "" });
+      setPaymentEditMode(false);
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
     },
     onError: () => toast.error("Failed to confirm payment"),
