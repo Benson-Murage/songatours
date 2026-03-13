@@ -13,6 +13,7 @@ import {
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import { formatKES } from "@/lib/formatKES";
+import InvoiceDownload from "@/components/InvoiceDownload";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pending: { label: "Pending", className: "bg-accent/10 text-accent" },
