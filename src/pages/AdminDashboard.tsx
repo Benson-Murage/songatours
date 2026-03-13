@@ -128,11 +128,15 @@ const AdminDashboard = () => {
   });
 
   const stats = useMemo(() => {
-    const totalRevenue = (adminBookings || []).reduce((sum: number, b: any) => sum + (b.status === "paid" ? Number(b.total_price) : 0), 0);
-    const activeBookings = (adminBookings || []).filter((b: any) => b.status === "pending" || b.status === "paid").length;
+    const nonCancelled = (adminBookings || []).filter((b: any) => b.status !== "cancelled");
+    const totalRevenue = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.deposit_amount || 0), 0);
+    const activeBookings = nonCancelled.length;
     const cancelledBookings = (adminBookings || []).filter((b: any) => b.status === "cancelled").length;
     const canceledTours = (adminTours || []).filter((t: any) => t.status === "canceled").length;
     const activeTours = (adminTours || []).filter((t: any) => t.status === "published").length;
+    const outstandingBalance = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.balance_due || 0), 0);
+    const fullyPaid = nonCancelled.filter((b: any) => b.payment_status === "paid").length;
+    const partialPaid = nonCancelled.filter((b: any) => b.payment_status === "partial").length;
     return {
       totalRevenue,
       activeBookings,
@@ -141,6 +145,9 @@ const AdminDashboard = () => {
       activeTours,
       totalBookings: adminBookings?.length || 0,
       canceledTours,
+      outstandingBalance,
+      fullyPaid,
+      partialPaid,
     };
   }, [adminBookings, adminTours]);
 
