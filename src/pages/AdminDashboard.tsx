@@ -5,6 +5,7 @@ import {
   AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
   Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download, QrCode, CalendarDays,
   Tag, Gift, UserCircle, TrendingUp, BarChart3, ClipboardList, CreditCard, CheckCircle2,
+  History, FileText, Wallet,
 } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
 import { QRCodeSVG } from "qrcode.react";
@@ -60,7 +61,8 @@ const AdminDashboard = () => {
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
   const [paymentBooking, setPaymentBooking] = useState<any | null>(null);
-  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "mpesa", reference: "" });
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "mpesa", reference: "", reason: "" });
+  const [paymentEditMode, setPaymentEditMode] = useState(false);
 
   const { data: role } = useQuery({
     queryKey: ["user-role", user?.id],
@@ -105,7 +107,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, booking_reference, discount_amount, payment_status, tours(title, category, destinations(name))")
+        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, booking_reference, discount_amount, payment_status, payment_method, deposit_amount, balance_due, tours(title, category, destinations(name))")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -126,11 +128,15 @@ const AdminDashboard = () => {
   });
 
   const stats = useMemo(() => {
-    const totalRevenue = (adminBookings || []).reduce((sum: number, b: any) => sum + (b.status === "paid" ? Number(b.total_price) : 0), 0);
-    const activeBookings = (adminBookings || []).filter((b: any) => b.status === "pending" || b.status === "paid").length;
+    const nonCancelled = (adminBookings || []).filter((b: any) => b.status !== "cancelled");
+    const totalRevenue = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.deposit_amount || 0), 0);
+    const activeBookings = nonCancelled.length;
     const cancelledBookings = (adminBookings || []).filter((b: any) => b.status === "cancelled").length;
     const canceledTours = (adminTours || []).filter((t: any) => t.status === "canceled").length;
     const activeTours = (adminTours || []).filter((t: any) => t.status === "published").length;
+    const outstandingBalance = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.balance_due || 0), 0);
+    const fullyPaid = nonCancelled.filter((b: any) => b.payment_status === "paid").length;
+    const partialPaid = nonCancelled.filter((b: any) => b.payment_status === "partial").length;
     return {
       totalRevenue,
       activeBookings,
@@ -139,6 +145,9 @@ const AdminDashboard = () => {
       activeTours,
       totalBookings: adminBookings?.length || 0,
       canceledTours,
+      outstandingBalance,
+      fullyPaid,
+      partialPaid,
     };
   }, [adminBookings, adminTours]);
 
@@ -310,12 +319,19 @@ const AdminDashboard = () => {
   });
 
   const confirmPaymentMut = useMutation({
-    mutationFn: async ({ bookingId, amount, method, reference, totalPrice }: {
-      bookingId: string; amount: number; method: string; reference: string; totalPrice: number;
+    mutationFn: async ({ bookingId, amount, method, reference, totalPrice, reason, isEdit }: {
+      bookingId: string; amount: number; method: string; reference: string; totalPrice: number; reason: string; isEdit: boolean;
     }) => {
-      const newPaymentStatus = amount >= totalPrice ? "paid" : "partial";
-      const newBookingStatus = amount >= totalPrice ? "paid" : "pending";
-      const balanceDue = Math.max(0, totalPrice - amount);
+      const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
+      const oldDepositAmount = Number(booking?.deposit_amount || 0);
+      const oldPaymentStatus = booking?.payment_status || "pending";
+      const oldPaymentMethod = booking?.payment_method || null;
+
+      const newTotalPaid = isEdit ? amount : oldDepositAmount + amount;
+      const overpayment = Math.max(0, newTotalPaid - totalPrice);
+      const newPaymentStatus = newTotalPaid >= totalPrice ? "paid" : newTotalPaid > 0 ? "partial" : "pending";
+      const newBookingStatus = newTotalPaid >= totalPrice ? "paid" : "pending";
+      const balanceDue = Math.max(0, totalPrice - newTotalPaid);
 
       const { error } = await supabase
         .from("bookings")
@@ -323,15 +339,25 @@ const AdminDashboard = () => {
           payment_status: newPaymentStatus,
           payment_method: method,
           payment_reference: reference || null,
-          deposit_amount: amount,
+          deposit_amount: newTotalPaid,
           balance_due: balanceDue,
           status: newBookingStatus as any,
         } as any)
         .eq("id", bookingId);
       if (error) throw error;
 
-      // Send payment confirmation email (fire and forget)
-      const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
+      await supabase.from("payment_audit_logs" as any).insert({
+        booking_id: bookingId,
+        admin_user_id: user!.id,
+        old_amount_paid: oldDepositAmount,
+        new_amount_paid: newTotalPaid,
+        old_payment_status: oldPaymentStatus,
+        new_payment_status: newPaymentStatus,
+        old_payment_method: oldPaymentMethod,
+        new_payment_method: method,
+        change_reason: reason || (isEdit ? "Payment correction" : "Payment recorded"),
+      });
+
       if (booking?.bookedByProfile?.email) {
         supabase.functions.invoke("send-booking-email", {
           body: {
@@ -348,11 +374,18 @@ const AdminDashboard = () => {
           },
         }).catch(() => {});
       }
+
+      return { overpayment };
     },
-    onSuccess: () => {
-      toast.success("Payment confirmed");
+    onSuccess: (result) => {
+      if (result.overpayment > 0) {
+        toast.success(`Payment confirmed. Overpayment of ${formatKES(result.overpayment)} noted.`);
+      } else {
+        toast.success("Payment confirmed");
+      }
       setPaymentBooking(null);
-      setPaymentForm({ amount: "", method: "mpesa", reference: "" });
+      setPaymentForm({ amount: "", method: "mpesa", reference: "", reason: "" });
+      setPaymentEditMode(false);
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
     },
     onError: () => toast.error("Failed to confirm payment"),
@@ -383,12 +416,17 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          <StatCard icon={DollarSign} label="Revenue (Paid)" value={formatKES(stats.totalRevenue)} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <StatCard icon={DollarSign} label="Revenue Received" value={formatKES(stats.totalRevenue)} />
+          <StatCard icon={Wallet} label="Outstanding" value={formatKES(stats.outstandingBalance)} />
+          <StatCard icon={CheckCircle2} label="Fully Paid" value={String(stats.fullyPaid)} />
+          <StatCard icon={CreditCard} label="Partial Payments" value={String(stats.partialPaid)} />
+          <StatCard icon={Users} label="Active Bookings" value={String(stats.activeBookings)} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <StatCard icon={Globe} label="Total Tours" value={String(stats.totalTours)} />
           <StatCard icon={Eye} label="Active Tours" value={String(stats.activeTours)} />
           <StatCard icon={Users} label="Total Bookings" value={String(stats.totalBookings)} />
-          <StatCard icon={Users} label="Active Bookings" value={String(stats.activeBookings)} />
           <StatCard icon={Ban} label="Cancelled" value={String(stats.cancelledBookings)} />
           <StatCard icon={AlertTriangle} label="Sold Out" value={String(soldOutAlerts.length)} />
         </div>
@@ -414,6 +452,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="tours">Tours</TabsTrigger>
             <TabsTrigger value="bookings">Bookings CRM</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
+            <TabsTrigger value="payment-history">Payment History</TabsTrigger>
             <TabsTrigger value="discounts">Promo Codes</TabsTrigger>
             <TabsTrigger value="referrals">Referrals</TabsTrigger>
             <TabsTrigger value="participants">Participants</TabsTrigger>
@@ -670,7 +709,8 @@ const AdminDashboard = () => {
                                 className="text-primary hover:text-primary text-xs h-7"
                                 onClick={() => {
                                   setPaymentBooking(b);
-                                  setPaymentForm({ amount: String(b.total_price), method: "mpesa", reference: "" });
+                                  setPaymentEditMode(b.payment_status !== "pending");
+                                  setPaymentForm({ amount: String(b.balance_due != null && Number(b.balance_due) > 0 ? b.balance_due : b.total_price), method: b.payment_method || "mpesa", reference: "", reason: "" });
                                 }}
                               >
                                 <CreditCard className="mr-1 h-3 w-3" />
@@ -696,7 +736,10 @@ const AdminDashboard = () => {
                                 price_per_person: Number(b.total_price) / b.guests_count,
                                 total_price: Number(b.total_price),
                                 discount_amount: Number((b as any).discount_amount || 0),
+                                amount_paid: Number(b.deposit_amount || 0),
+                                balance_due: Number(b.balance_due || 0),
                                 payment_status: b.payment_status || (b.status === "paid" ? "paid" : "pending"),
+                                payment_method: b.payment_method || undefined,
                                 created_at: b.created_at,
                               }} />
                             </div>
@@ -774,6 +817,11 @@ const AdminDashboard = () => {
             <AnalyticsTab bookings={adminBookings || []} tours={adminTours || []} />
           </TabsContent>
 
+          {/* ── PAYMENT HISTORY TAB ── */}
+          <TabsContent value="payment-history" className="space-y-4">
+            <PaymentHistoryTab />
+          </TabsContent>
+
         </Tabs>
       </div>
 
@@ -849,28 +897,74 @@ const AdminDashboard = () => {
       </AlertDialog>
 
       {/* Payment Confirmation Dialog */}
-      <Dialog open={!!paymentBooking} onOpenChange={(open) => !open && setPaymentBooking(null)}>
-        <DialogContent className="max-w-sm">
+      <Dialog open={!!paymentBooking} onOpenChange={(open) => { if (!open) { setPaymentBooking(null); setPaymentEditMode(false); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogTitle>{paymentEditMode ? "Edit Payment" : "Record Payment"}</DialogTitle>
             <DialogDescription>
               {paymentBooking?.bookedByProfile?.full_name || "Customer"} — {paymentBooking?.tours?.title || "Tour"}
               <br />
               Total: <strong>{formatKES(paymentBooking?.total_price || 0)}</strong>
+              {Number(paymentBooking?.deposit_amount || 0) > 0 && (
+                <> • Already Paid: <strong>{formatKES(paymentBooking?.deposit_amount || 0)}</strong></>
+              )}
               {paymentBooking?.balance_due != null && Number(paymentBooking.balance_due) > 0 && (
                 <> • Balance: <strong>{formatKES(paymentBooking.balance_due)}</strong></>
               )}
             </DialogDescription>
           </DialogHeader>
+
+          {paymentEditMode && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>You are modifying payment records. This action will be logged for auditing.</span>
+            </div>
+          )}
+
           <div className="space-y-3">
+            {Number(paymentBooking?.deposit_amount || 0) > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={!paymentEditMode ? "secondary" : "outline"}
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setPaymentEditMode(false)}
+                >
+                  Add Payment
+                </Button>
+                <Button
+                  variant={paymentEditMode ? "secondary" : "outline"}
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setPaymentEditMode(true)}
+                >
+                  <Edit className="mr-1 h-3 w-3" /> Edit Total Paid
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-1.5">
-              <Label>Amount Received (KSh) *</Label>
+              <Label>{paymentEditMode ? "New Total Amount Paid (KSh) *" : "Amount Received (KSh) *"}</Label>
               <Input
                 type="number"
-                min="1"
+                min="0"
                 value={paymentForm.amount}
                 onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
               />
+              {(() => {
+                const amt = Number(paymentForm.amount || 0);
+                const total = Number(paymentBooking?.total_price || 0);
+                const effectiveTotal = paymentEditMode ? amt : Number(paymentBooking?.deposit_amount || 0) + amt;
+                if (effectiveTotal > total && total > 0) {
+                  return (
+                    <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Payment exceeds tour price by {formatKES(effectiveTotal - total)}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
             <div className="space-y-1.5">
               <Label>Payment Method</Label>
@@ -892,18 +986,26 @@ const AdminDashboard = () => {
                 placeholder="e.g. MPESA code"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Reason {paymentEditMode ? "*" : "(optional)"}</Label>
+              <Input
+                value={paymentForm.reason}
+                onChange={(e) => setPaymentForm({ ...paymentForm, reason: e.target.value })}
+                placeholder={paymentEditMode ? "e.g. Correcting wrong amount" : "e.g. Deposit payment"}
+              />
+            </div>
             <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setPaymentBooking(null)}
+                onClick={() => { setPaymentBooking(null); setPaymentEditMode(false); }}
               >
                 Cancel
               </Button>
               <Button
                 variant="accent"
                 className="flex-1"
-                disabled={!paymentForm.amount || Number(paymentForm.amount) <= 0 || confirmPaymentMut.isPending}
+                disabled={!paymentForm.amount || Number(paymentForm.amount) <= 0 || confirmPaymentMut.isPending || (paymentEditMode && !paymentForm.reason.trim())}
                 onClick={() => {
                   if (!paymentBooking) return;
                   confirmPaymentMut.mutate({
@@ -912,12 +1014,14 @@ const AdminDashboard = () => {
                     method: paymentForm.method,
                     reference: paymentForm.reference,
                     totalPrice: Number(paymentBooking.total_price),
+                    reason: paymentForm.reason,
+                    isEdit: paymentEditMode,
                   });
                 }}
               >
                 {confirmPaymentMut.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="mr-1 h-4 w-4" />
-                Confirm
+                {paymentEditMode ? "Save Changes" : "Confirm"}
               </Button>
             </div>
           </div>
@@ -1868,6 +1972,90 @@ const AnalyticsTab = ({ bookings, tours }: { bookings: any[]; tours: any[] }) =>
           </div>
         ) : <p className="text-muted-foreground text-sm">No booking data yet.</p>}
       </div>
+    </>
+  );
+};
+
+/* ─── Payment History Tab ───────────────────────────────────────────── */
+const PaymentHistoryTab = () => {
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["payment-audit-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payment_audit_logs" as any)
+        .select("*")
+        .order("changed_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+
+      const bookingIds = Array.from(new Set((data || []).map((l: any) => l.booking_id)));
+      const adminIds = Array.from(new Set((data || []).map((l: any) => l.admin_user_id)));
+      const allIds = Array.from(new Set([...adminIds]));
+
+      let profileMap: Record<string, string> = {};
+      if (allIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", allIds);
+        profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p.full_name || "Admin"]));
+      }
+
+      let bookingMap: Record<string, string> = {};
+      if (bookingIds.length > 0) {
+        const { data: bookings } = await supabase.from("bookings").select("id, booking_reference").in("id", bookingIds);
+        bookingMap = Object.fromEntries((bookings || []).map((b: any) => [b.id, b.booking_reference || b.id.slice(0, 8)]));
+      }
+
+      return (data || []).map((l: any) => ({
+        ...l,
+        admin_name: profileMap[l.admin_user_id] || "Admin",
+        booking_ref: bookingMap[l.booking_id] || l.booking_id?.slice(0, 8),
+      }));
+    },
+  });
+
+  return (
+    <>
+      <p className="text-sm text-muted-foreground flex items-center gap-2">
+        <History className="h-4 w-4" /> All payment changes are recorded here for auditing.
+      </p>
+      {isLoading ? <Skeleton className="h-40 rounded-xl" /> : (
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
+          <table className="w-full min-w-[800px] text-sm">
+            <thead className="bg-muted/50">
+              <tr className="text-left">
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Booking</th>
+                <th className="px-4 py-3 font-medium">Admin</th>
+                <th className="px-4 py-3 font-medium">Old Amount</th>
+                <th className="px-4 py-3 font-medium">New Amount</th>
+                <th className="px-4 py-3 font-medium">Status Change</th>
+                <th className="px-4 py-3 font-medium">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(logs || []).map((log: any) => (
+                <tr key={log.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(log.changed_at).toLocaleString()}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{log.booking_ref}</td>
+                  <td className="px-4 py-3 text-xs">{log.admin_name}</td>
+                  <td className="px-4 py-3 text-xs">{formatKES(log.old_amount_paid || 0)}</td>
+                  <td className="px-4 py-3 text-xs font-medium">{formatKES(log.new_amount_paid || 0)}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className="text-muted-foreground">{log.old_payment_status}</span>
+                    {" → "}
+                    <span className={`font-medium ${log.new_payment_status === "paid" ? "text-primary" : log.new_payment_status === "partial" ? "text-accent" : ""}`}>
+                      {log.new_payment_status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{log.change_reason || "—"}</td>
+                </tr>
+              ))}
+              {(!logs || logs.length === 0) && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No payment changes recorded yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 };

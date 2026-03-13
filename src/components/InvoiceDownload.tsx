@@ -14,7 +14,10 @@ interface InvoiceData {
   price_per_person: number;
   total_price: number;
   discount_amount?: number;
+  amount_paid?: number;
+  balance_due?: number;
   payment_status: string;
+  payment_method?: string;
   created_at: string;
 }
 
@@ -67,9 +70,11 @@ const InvoiceDownload = ({ data }: { data: InvoiceData }) => {
     <table>
       <thead><tr><th>Description</th><th>Details</th><th style="text-align:right;">Amount</th></tr></thead>
       <tbody>
-        <tr><td><strong>${data.tour_title}</strong>${data.destination ? `<br><span style="color:#6B7280;font-size:12px;">${data.destination}</span>` : ''}</td><td>${formattedDate}<br>${data.guests_count} guest${data.guests_count > 1 ? 's' : ''}</td><td style="text-align:right;">${formatKES(data.price_per_person)} × ${data.guests_count}</td></tr>
+        <tr><td><strong>${data.tour_title}</strong>${data.destination ? `<br><span style="color:#6B7280;font-size:12px;">${data.destination}</span>` : ''}</td><td>${formattedDate}<br>${data.guests_count} guest${data.guests_count > 1 ? 's' : ''}${data.payment_method ? `<br><span style="color:#6B7280;font-size:12px;">via ${data.payment_method}</span>` : ''}</td><td style="text-align:right;">${formatKES(data.price_per_person)} × ${data.guests_count}</td></tr>
         ${data.discount_amount && data.discount_amount > 0 ? `<tr><td colspan="2">Discount</td><td style="text-align:right;color:#059669;">-${formatKES(data.discount_amount)}</td></tr>` : ''}
         <tr class="total-row"><td colspan="2">Total</td><td style="text-align:right;">${formatKES(data.total_price)}</td></tr>
+        ${data.amount_paid != null && data.amount_paid > 0 ? `<tr><td colspan="2" style="font-size:14px;">Amount Paid</td><td style="text-align:right;color:#059669;font-size:14px;font-weight:600;">${formatKES(data.amount_paid)}</td></tr>` : ''}
+        ${data.balance_due != null && data.balance_due > 0 ? `<tr><td colspan="2" style="font-size:14px;">Balance Due</td><td style="text-align:right;color:#D97706;font-size:14px;font-weight:600;">${formatKES(data.balance_due)}</td></tr>` : ''}
       </tbody>
     </table>
   </div>

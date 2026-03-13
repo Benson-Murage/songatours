@@ -274,6 +274,56 @@ export type Database = {
           },
         ]
       }
+      payment_audit_logs: {
+        Row: {
+          admin_user_id: string
+          booking_id: string
+          change_reason: string | null
+          changed_at: string
+          id: string
+          new_amount_paid: number | null
+          new_payment_method: string | null
+          new_payment_status: string | null
+          old_amount_paid: number | null
+          old_payment_method: string | null
+          old_payment_status: string | null
+        }
+        Insert: {
+          admin_user_id: string
+          booking_id: string
+          change_reason?: string | null
+          changed_at?: string
+          id?: string
+          new_amount_paid?: number | null
+          new_payment_method?: string | null
+          new_payment_status?: string | null
+          old_amount_paid?: number | null
+          old_payment_method?: string | null
+          old_payment_status?: string | null
+        }
+        Update: {
+          admin_user_id?: string
+          booking_id?: string
+          change_reason?: string | null
+          changed_at?: string
+          id?: string
+          new_amount_paid?: number | null
+          new_payment_method?: string | null
+          new_payment_status?: string | null
+          old_amount_paid?: number | null
+          old_payment_method?: string | null
+          old_payment_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_audit_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
