@@ -835,6 +835,82 @@ const AdminDashboard = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Payment Confirmation Dialog */}
+      <Dialog open={!!paymentBooking} onOpenChange={(open) => !open && setPaymentBooking(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogDescription>
+              {paymentBooking?.bookedByProfile?.full_name || "Customer"} — {paymentBooking?.tours?.title || "Tour"}
+              <br />
+              Total: <strong>{formatKES(paymentBooking?.total_price || 0)}</strong>
+              {paymentBooking?.balance_due != null && Number(paymentBooking.balance_due) > 0 && (
+                <> • Balance: <strong>{formatKES(paymentBooking.balance_due)}</strong></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Amount Received (KSh) *</Label>
+              <Input
+                type="number"
+                min="1"
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Payment Method</Label>
+              <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mpesa">M-Pesa</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Payment Reference</Label>
+              <Input
+                value={paymentForm.reference}
+                onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                placeholder="e.g. MPESA code"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setPaymentBooking(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="accent"
+                className="flex-1"
+                disabled={!paymentForm.amount || Number(paymentForm.amount) <= 0 || confirmPaymentMut.isPending}
+                onClick={() => {
+                  if (!paymentBooking) return;
+                  confirmPaymentMut.mutate({
+                    bookingId: paymentBooking.id,
+                    amount: Number(paymentForm.amount),
+                    method: paymentForm.method,
+                    reference: paymentForm.reference,
+                    totalPrice: Number(paymentBooking.total_price),
+                  });
+                }}
+              >
+                {confirmPaymentMut.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                <CheckCircle2 className="mr-1 h-4 w-4" />
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Tour Dialog */}
       {editingTour && (
         <EditTourDialog
