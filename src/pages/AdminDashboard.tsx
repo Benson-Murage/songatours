@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle, Ban, DollarSign, Edit, Eye, EyeOff, Globe, Image as ImageIcon,
   Loader2, Plus, Search, Trash2, Users, X, Upload, Car, Download, QrCode, CalendarDays,
-  Tag, Gift, UserCircle, TrendingUp, BarChart3, ClipboardList,
+  Tag, Gift, UserCircle, TrendingUp, BarChart3, ClipboardList, CreditCard, CheckCircle2,
 } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
 import { QRCodeSVG } from "qrcode.react";
@@ -59,6 +59,8 @@ const AdminDashboard = () => {
   const [slotEdits, setSlotEdits] = useState<Record<string, string>>({});
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
+  const [paymentBooking, setPaymentBooking] = useState<any | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "mpesa", reference: "" });
 
   const { data: role } = useQuery({
     queryKey: ["user-role", user?.id],
@@ -307,6 +309,55 @@ const AdminDashboard = () => {
     onError: () => toast.error("Failed to cancel booking"),
   });
 
+  const confirmPaymentMut = useMutation({
+    mutationFn: async ({ bookingId, amount, method, reference, totalPrice }: {
+      bookingId: string; amount: number; method: string; reference: string; totalPrice: number;
+    }) => {
+      const newPaymentStatus = amount >= totalPrice ? "paid" : "partial";
+      const newBookingStatus = amount >= totalPrice ? "paid" : "pending";
+      const balanceDue = Math.max(0, totalPrice - amount);
+
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          payment_status: newPaymentStatus,
+          payment_method: method,
+          payment_reference: reference || null,
+          deposit_amount: amount,
+          balance_due: balanceDue,
+          status: newBookingStatus as any,
+        } as any)
+        .eq("id", bookingId);
+      if (error) throw error;
+
+      // Send payment confirmation email (fire and forget)
+      const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
+      if (booking?.bookedByProfile?.email) {
+        supabase.functions.invoke("send-booking-email", {
+          body: {
+            to_email: booking.bookedByProfile.email,
+            to_name: booking.bookedByProfile.full_name || "",
+            booking_id: bookingId,
+            booking_reference: booking.booking_reference,
+            tour_title: booking.tours?.title || "Tour",
+            start_date: booking.start_date,
+            guests_count: booking.guests_count,
+            total_price: booking.total_price,
+            whatsapp_group_link: null,
+            type: "confirmation",
+          },
+        }).catch(() => {});
+      }
+    },
+    onSuccess: () => {
+      toast.success("Payment confirmed");
+      setPaymentBooking(null);
+      setPaymentForm({ amount: "", method: "mpesa", reference: "" });
+      queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+    },
+    onError: () => toast.error("Failed to confirm payment"),
+  });
+
   if (loading) return null;
   if (!isAdmin) {
     return (
@@ -545,7 +596,7 @@ const AdminDashboard = () => {
               <Skeleton className="h-56 rounded-xl" />
             ) : (
               <div className="rounded-xl border border-border bg-card overflow-x-auto">
-                <table className="w-full min-w-[1200px] text-sm">
+                <table className="w-full min-w-[1400px] text-sm">
                   <thead className="bg-muted/50">
                     <tr className="text-left">
                       <th className="px-4 py-3 font-medium">Customer</th>
@@ -557,6 +608,7 @@ const AdminDashboard = () => {
                       <th className="px-4 py-3 font-medium">Total</th>
                       <th className="px-4 py-3 font-medium">Start</th>
                       <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Payment</th>
                       <th className="px-4 py-3 font-medium">Cancelled By</th>
                       <th className="px-4 py-3 font-medium">Booked</th>
                       <th className="px-4 py-3 font-medium">Actions</th>
@@ -586,6 +638,18 @@ const AdminDashboard = () => {
                             {b.status}
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            b.payment_status === "paid" ? "bg-primary/10 text-primary"
+                            : b.payment_status === "partial" ? "bg-accent/10 text-accent"
+                            : "bg-muted text-muted-foreground"
+                          }`}>
+                            {b.payment_status || "pending"}
+                          </span>
+                          {b.balance_due != null && Number(b.balance_due) > 0 && b.status !== "cancelled" && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Bal: {formatKES(b.balance_due)}</p>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {b.status === "cancelled" ? (
                             <div>
@@ -600,6 +664,18 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3">
                           {b.status !== "cancelled" && (
                             <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:text-primary text-xs h-7"
+                                onClick={() => {
+                                  setPaymentBooking(b);
+                                  setPaymentForm({ amount: String(b.total_price), method: "mpesa", reference: "" });
+                                }}
+                              >
+                                <CreditCard className="mr-1 h-3 w-3" />
+                                Payment
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -620,7 +696,7 @@ const AdminDashboard = () => {
                                 price_per_person: Number(b.total_price) / b.guests_count,
                                 total_price: Number(b.total_price),
                                 discount_amount: Number((b as any).discount_amount || 0),
-                                payment_status: b.status === "paid" ? "paid" : "pending",
+                                payment_status: b.payment_status || (b.status === "paid" ? "paid" : "pending"),
                                 created_at: b.created_at,
                               }} />
                             </div>
@@ -771,6 +847,82 @@ const AdminDashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Payment Confirmation Dialog */}
+      <Dialog open={!!paymentBooking} onOpenChange={(open) => !open && setPaymentBooking(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogDescription>
+              {paymentBooking?.bookedByProfile?.full_name || "Customer"} — {paymentBooking?.tours?.title || "Tour"}
+              <br />
+              Total: <strong>{formatKES(paymentBooking?.total_price || 0)}</strong>
+              {paymentBooking?.balance_due != null && Number(paymentBooking.balance_due) > 0 && (
+                <> • Balance: <strong>{formatKES(paymentBooking.balance_due)}</strong></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Amount Received (KSh) *</Label>
+              <Input
+                type="number"
+                min="1"
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Payment Method</Label>
+              <Select value={paymentForm.method} onValueChange={(v) => setPaymentForm({ ...paymentForm, method: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mpesa">M-Pesa</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Payment Reference</Label>
+              <Input
+                value={paymentForm.reference}
+                onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                placeholder="e.g. MPESA code"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setPaymentBooking(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="accent"
+                className="flex-1"
+                disabled={!paymentForm.amount || Number(paymentForm.amount) <= 0 || confirmPaymentMut.isPending}
+                onClick={() => {
+                  if (!paymentBooking) return;
+                  confirmPaymentMut.mutate({
+                    bookingId: paymentBooking.id,
+                    amount: Number(paymentForm.amount),
+                    method: paymentForm.method,
+                    reference: paymentForm.reference,
+                    totalPrice: Number(paymentBooking.total_price),
+                  });
+                }}
+              >
+                {confirmPaymentMut.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                <CheckCircle2 className="mr-1 h-4 w-4" />
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Tour Dialog */}
       {editingTour && (
