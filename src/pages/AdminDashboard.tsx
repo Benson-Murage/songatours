@@ -59,6 +59,8 @@ const AdminDashboard = () => {
   const [slotEdits, setSlotEdits] = useState<Record<string, string>>({});
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
+  const [paymentBooking, setPaymentBooking] = useState<any | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ amount: "", method: "mpesa", reference: "" });
 
   const { data: role } = useQuery({
     queryKey: ["user-role", user?.id],
