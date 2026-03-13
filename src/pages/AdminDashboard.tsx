@@ -1973,4 +1973,88 @@ const AnalyticsTab = ({ bookings, tours }: { bookings: any[]; tours: any[] }) =>
   );
 };
 
+/* ─── Payment History Tab ───────────────────────────────────────────── */
+const PaymentHistoryTab = () => {
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["payment-audit-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payment_audit_logs" as any)
+        .select("*")
+        .order("changed_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+
+      const bookingIds = Array.from(new Set((data || []).map((l: any) => l.booking_id)));
+      const adminIds = Array.from(new Set((data || []).map((l: any) => l.admin_user_id)));
+      const allIds = Array.from(new Set([...adminIds]));
+
+      let profileMap: Record<string, string> = {};
+      if (allIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", allIds);
+        profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p.full_name || "Admin"]));
+      }
+
+      let bookingMap: Record<string, string> = {};
+      if (bookingIds.length > 0) {
+        const { data: bookings } = await supabase.from("bookings").select("id, booking_reference").in("id", bookingIds);
+        bookingMap = Object.fromEntries((bookings || []).map((b: any) => [b.id, b.booking_reference || b.id.slice(0, 8)]));
+      }
+
+      return (data || []).map((l: any) => ({
+        ...l,
+        admin_name: profileMap[l.admin_user_id] || "Admin",
+        booking_ref: bookingMap[l.booking_id] || l.booking_id?.slice(0, 8),
+      }));
+    },
+  });
+
+  return (
+    <>
+      <p className="text-sm text-muted-foreground flex items-center gap-2">
+        <History className="h-4 w-4" /> All payment changes are recorded here for auditing.
+      </p>
+      {isLoading ? <Skeleton className="h-40 rounded-xl" /> : (
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
+          <table className="w-full min-w-[800px] text-sm">
+            <thead className="bg-muted/50">
+              <tr className="text-left">
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Booking</th>
+                <th className="px-4 py-3 font-medium">Admin</th>
+                <th className="px-4 py-3 font-medium">Old Amount</th>
+                <th className="px-4 py-3 font-medium">New Amount</th>
+                <th className="px-4 py-3 font-medium">Status Change</th>
+                <th className="px-4 py-3 font-medium">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(logs || []).map((log: any) => (
+                <tr key={log.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(log.changed_at).toLocaleString()}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{log.booking_ref}</td>
+                  <td className="px-4 py-3 text-xs">{log.admin_name}</td>
+                  <td className="px-4 py-3 text-xs">{formatKES(log.old_amount_paid || 0)}</td>
+                  <td className="px-4 py-3 text-xs font-medium">{formatKES(log.new_amount_paid || 0)}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className="text-muted-foreground">{log.old_payment_status}</span>
+                    {" → "}
+                    <span className={`font-medium ${log.new_payment_status === "paid" ? "text-primary" : log.new_payment_status === "partial" ? "text-accent" : ""}`}>
+                      {log.new_payment_status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{log.change_reason || "—"}</td>
+                </tr>
+              ))}
+              {(!logs || logs.length === 0) && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No payment changes recorded yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+};
+
 export default AdminDashboard;
