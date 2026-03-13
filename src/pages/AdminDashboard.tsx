@@ -416,12 +416,17 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          <StatCard icon={DollarSign} label="Revenue (Paid)" value={formatKES(stats.totalRevenue)} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <StatCard icon={DollarSign} label="Revenue Received" value={formatKES(stats.totalRevenue)} />
+          <StatCard icon={Wallet} label="Outstanding" value={formatKES(stats.outstandingBalance)} />
+          <StatCard icon={CheckCircle2} label="Fully Paid" value={String(stats.fullyPaid)} />
+          <StatCard icon={CreditCard} label="Partial Payments" value={String(stats.partialPaid)} />
+          <StatCard icon={Users} label="Active Bookings" value={String(stats.activeBookings)} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <StatCard icon={Globe} label="Total Tours" value={String(stats.totalTours)} />
           <StatCard icon={Eye} label="Active Tours" value={String(stats.activeTours)} />
           <StatCard icon={Users} label="Total Bookings" value={String(stats.totalBookings)} />
-          <StatCard icon={Users} label="Active Bookings" value={String(stats.activeBookings)} />
           <StatCard icon={Ban} label="Cancelled" value={String(stats.cancelledBookings)} />
           <StatCard icon={AlertTriangle} label="Sold Out" value={String(soldOutAlerts.length)} />
         </div>
