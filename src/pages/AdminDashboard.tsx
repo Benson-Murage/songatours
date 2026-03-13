@@ -883,28 +883,74 @@ const AdminDashboard = () => {
       </AlertDialog>
 
       {/* Payment Confirmation Dialog */}
-      <Dialog open={!!paymentBooking} onOpenChange={(open) => !open && setPaymentBooking(null)}>
-        <DialogContent className="max-w-sm">
+      <Dialog open={!!paymentBooking} onOpenChange={(open) => { if (!open) { setPaymentBooking(null); setPaymentEditMode(false); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogTitle>{paymentEditMode ? "Edit Payment" : "Record Payment"}</DialogTitle>
             <DialogDescription>
               {paymentBooking?.bookedByProfile?.full_name || "Customer"} — {paymentBooking?.tours?.title || "Tour"}
               <br />
               Total: <strong>{formatKES(paymentBooking?.total_price || 0)}</strong>
+              {Number(paymentBooking?.deposit_amount || 0) > 0 && (
+                <> • Already Paid: <strong>{formatKES(paymentBooking?.deposit_amount || 0)}</strong></>
+              )}
               {paymentBooking?.balance_due != null && Number(paymentBooking.balance_due) > 0 && (
                 <> • Balance: <strong>{formatKES(paymentBooking.balance_due)}</strong></>
               )}
             </DialogDescription>
           </DialogHeader>
+
+          {paymentEditMode && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>You are modifying payment records. This action will be logged for auditing.</span>
+            </div>
+          )}
+
           <div className="space-y-3">
+            {Number(paymentBooking?.deposit_amount || 0) > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={!paymentEditMode ? "secondary" : "outline"}
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setPaymentEditMode(false)}
+                >
+                  Add Payment
+                </Button>
+                <Button
+                  variant={paymentEditMode ? "secondary" : "outline"}
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setPaymentEditMode(true)}
+                >
+                  <Edit className="mr-1 h-3 w-3" /> Edit Total Paid
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-1.5">
-              <Label>Amount Received (KSh) *</Label>
+              <Label>{paymentEditMode ? "New Total Amount Paid (KSh) *" : "Amount Received (KSh) *"}</Label>
               <Input
                 type="number"
-                min="1"
+                min="0"
                 value={paymentForm.amount}
                 onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
               />
+              {(() => {
+                const amt = Number(paymentForm.amount || 0);
+                const total = Number(paymentBooking?.total_price || 0);
+                const effectiveTotal = paymentEditMode ? amt : Number(paymentBooking?.deposit_amount || 0) + amt;
+                if (effectiveTotal > total && total > 0) {
+                  return (
+                    <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Payment exceeds tour price by {formatKES(effectiveTotal - total)}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
             <div className="space-y-1.5">
               <Label>Payment Method</Label>
@@ -926,18 +972,26 @@ const AdminDashboard = () => {
                 placeholder="e.g. MPESA code"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Reason {paymentEditMode ? "*" : "(optional)"}</Label>
+              <Input
+                value={paymentForm.reason}
+                onChange={(e) => setPaymentForm({ ...paymentForm, reason: e.target.value })}
+                placeholder={paymentEditMode ? "e.g. Correcting wrong amount" : "e.g. Deposit payment"}
+              />
+            </div>
             <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setPaymentBooking(null)}
+                onClick={() => { setPaymentBooking(null); setPaymentEditMode(false); }}
               >
                 Cancel
               </Button>
               <Button
                 variant="accent"
                 className="flex-1"
-                disabled={!paymentForm.amount || Number(paymentForm.amount) <= 0 || confirmPaymentMut.isPending}
+                disabled={!paymentForm.amount || Number(paymentForm.amount) <= 0 || confirmPaymentMut.isPending || (paymentEditMode && !paymentForm.reason.trim())}
                 onClick={() => {
                   if (!paymentBooking) return;
                   confirmPaymentMut.mutate({
@@ -946,12 +1000,14 @@ const AdminDashboard = () => {
                     method: paymentForm.method,
                     reference: paymentForm.reference,
                     totalPrice: Number(paymentBooking.total_price),
+                    reason: paymentForm.reason,
+                    isEdit: paymentEditMode,
                   });
                 }}
               >
                 {confirmPaymentMut.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="mr-1 h-4 w-4" />
-                Confirm
+                {paymentEditMode ? "Save Changes" : "Confirm"}
               </Button>
             </div>
           </div>
