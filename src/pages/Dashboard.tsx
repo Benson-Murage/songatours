@@ -130,6 +130,26 @@ const Dashboard = () => {
                 <MessageCircle className="mr-1 h-3 w-3" /> WhatsApp Group
               </Button>
             )}
+            {b.status !== "cancelled" && (
+              <InvoiceDownload data={{
+                booking_reference: (b as any).booking_reference || b.id.slice(0, 8),
+                customer_name: user?.user_metadata?.full_name || "Customer",
+                customer_email: user?.email || "",
+                customer_phone: (b as any).phone_number || "",
+                tour_title: b.tours?.title || "Tour",
+                destination: b.tours?.destinations?.name,
+                start_date: b.start_date,
+                guests_count: b.guests_count,
+                price_per_person: Number(b.total_price) / b.guests_count,
+                total_price: Number(b.total_price),
+                discount_amount: Number((b as any).discount_amount || 0),
+                amount_paid: Number((b as any).deposit_amount || 0),
+                balance_due: Number((b as any).balance_due || 0),
+                payment_status: (b as any).payment_status || (b.status === "paid" ? "paid" : "pending"),
+                payment_method: (b as any).payment_method || undefined,
+                created_at: b.created_at,
+              }} />
+            )}
             {b.status === "pending" && (
               <Button
                 variant="ghost"
