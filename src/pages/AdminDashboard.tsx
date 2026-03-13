@@ -361,7 +361,7 @@ const AdminDashboard = () => {
     onSuccess: () => {
       toast.success("Payment confirmed");
       setPaymentBooking(null);
-      setPaymentForm({ amount: "", method: "mpesa", reference: "" });
+      setPaymentForm({ amount: "", method: "mpesa", reference: "", reason: "" });
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
     },
     onError: () => toast.error("Failed to confirm payment"),
