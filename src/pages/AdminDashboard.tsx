@@ -654,6 +654,18 @@ const AdminDashboard = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className="text-primary hover:text-primary text-xs h-7"
+                                onClick={() => {
+                                  setPaymentBooking(b);
+                                  setPaymentForm({ amount: String(b.total_price), method: "mpesa", reference: "" });
+                                }}
+                              >
+                                <CreditCard className="mr-1 h-3 w-3" />
+                                Payment
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 className="text-destructive hover:text-destructive text-xs h-7"
                                 onClick={() => setBookingToCancel(b)}
                               >
@@ -671,7 +683,7 @@ const AdminDashboard = () => {
                                 price_per_person: Number(b.total_price) / b.guests_count,
                                 total_price: Number(b.total_price),
                                 discount_amount: Number((b as any).discount_amount || 0),
-                                payment_status: b.status === "paid" ? "paid" : "pending",
+                                payment_status: b.payment_status || (b.status === "paid" ? "paid" : "pending"),
                                 created_at: b.created_at,
                               }} />
                             </div>
