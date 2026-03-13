@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -23,7 +24,7 @@ const ContactPage = () => {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = contactSchema.safeParse(form);
     if (!result.success) {
@@ -31,11 +32,19 @@ const ContactPage = () => {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-contact-email", {
+        body: { name: form.name, email: form.email, message: form.message },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast.success("Message sent! We'll get back to you soon.");
       setForm({ name: "", email: "", message: "" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send message. Please try again.");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
