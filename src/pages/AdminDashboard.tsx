@@ -452,6 +452,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="tours">Tours</TabsTrigger>
             <TabsTrigger value="bookings">Bookings CRM</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
+            <TabsTrigger value="payment-history">Payment History</TabsTrigger>
             <TabsTrigger value="discounts">Promo Codes</TabsTrigger>
             <TabsTrigger value="referrals">Referrals</TabsTrigger>
             <TabsTrigger value="participants">Participants</TabsTrigger>
