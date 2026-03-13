@@ -679,7 +679,8 @@ const AdminDashboard = () => {
                                 className="text-primary hover:text-primary text-xs h-7"
                                 onClick={() => {
                                   setPaymentBooking(b);
-                                  setPaymentForm({ amount: String(b.total_price), method: "mpesa", reference: "" });
+                                  setPaymentEditMode(b.payment_status !== "pending");
+                                  setPaymentForm({ amount: String(b.balance_due != null && Number(b.balance_due) > 0 ? b.balance_due : b.total_price), method: b.payment_method || "mpesa", reference: "", reason: "" });
                                 }}
                               >
                                 <CreditCard className="mr-1 h-3 w-3" />
