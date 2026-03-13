@@ -309,6 +309,55 @@ const AdminDashboard = () => {
     onError: () => toast.error("Failed to cancel booking"),
   });
 
+  const confirmPaymentMut = useMutation({
+    mutationFn: async ({ bookingId, amount, method, reference, totalPrice }: {
+      bookingId: string; amount: number; method: string; reference: string; totalPrice: number;
+    }) => {
+      const newPaymentStatus = amount >= totalPrice ? "paid" : "partial";
+      const newBookingStatus = amount >= totalPrice ? "paid" : "pending";
+      const balanceDue = Math.max(0, totalPrice - amount);
+
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          payment_status: newPaymentStatus,
+          payment_method: method,
+          payment_reference: reference || null,
+          deposit_amount: amount,
+          balance_due: balanceDue,
+          status: newBookingStatus as any,
+        } as any)
+        .eq("id", bookingId);
+      if (error) throw error;
+
+      // Send payment confirmation email (fire and forget)
+      const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
+      if (booking?.bookedByProfile?.email) {
+        supabase.functions.invoke("send-booking-email", {
+          body: {
+            to_email: booking.bookedByProfile.email,
+            to_name: booking.bookedByProfile.full_name || "",
+            booking_id: bookingId,
+            booking_reference: booking.booking_reference,
+            tour_title: booking.tours?.title || "Tour",
+            start_date: booking.start_date,
+            guests_count: booking.guests_count,
+            total_price: booking.total_price,
+            whatsapp_group_link: null,
+            type: "confirmation",
+          },
+        }).catch(() => {});
+      }
+    },
+    onSuccess: () => {
+      toast.success("Payment confirmed");
+      setPaymentBooking(null);
+      setPaymentForm({ amount: "", method: "mpesa", reference: "" });
+      queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+    },
+    onError: () => toast.error("Failed to confirm payment"),
+  });
+
   if (loading) return null;
   if (!isAdmin) {
     return (
