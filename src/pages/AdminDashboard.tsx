@@ -638,6 +638,18 @@ const AdminDashboard = () => {
                             {b.status}
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            b.payment_status === "paid" ? "bg-primary/10 text-primary"
+                            : b.payment_status === "partial" ? "bg-accent/10 text-accent"
+                            : "bg-muted text-muted-foreground"
+                          }`}>
+                            {b.payment_status || "pending"}
+                          </span>
+                          {b.balance_due != null && Number(b.balance_due) > 0 && b.status !== "cancelled" && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Bal: {formatKES(b.balance_due)}</p>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {b.status === "cancelled" ? (
                             <div>
