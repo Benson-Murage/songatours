@@ -21,9 +21,8 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-16">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <MapPin className="h-5 w-5 text-accent" />
-              <span className="text-lg font-bold">Songa</span>
+            <div className="mb-4">
+              <img src={songaLogo} alt="Songa Travel & Tours" className="h-12 w-auto" />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
               Premium African travel experiences. Discover breathtaking destinations and create unforgettable memories.

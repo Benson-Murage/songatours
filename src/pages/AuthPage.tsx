@@ -99,9 +99,8 @@ const AuthPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <MapPin className="h-8 w-8 text-accent" />
-            <span className="text-2xl font-bold">Songa</span>
+          <div className="flex justify-center mb-6">
+            <img src={songaLogo} alt="Songa Travel & Tours" className="h-16 w-auto" />
           </div>
           <h1 className="text-2xl font-bold">
             {mode === "login" ? "Welcome back" : mode === "signup" ? "Create your account" : "Reset password"}
