@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { MapPin, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
+import songaLogo from "@/assets/songa-logo.png";
 
 const NotFound = () => (
   <Layout>
