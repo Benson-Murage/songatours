@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Mail, Instagram, Twitter, Facebook } from "lucide-react";
+import { Mail, Instagram, Twitter, Facebook } from "lucide-react";
+import songaLogo from "@/assets/songa-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
