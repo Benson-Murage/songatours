@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, MapPin, User, LogOut, Briefcase, Shield, Car } from "lucide-react";
+import { Menu, LogOut, Briefcase, Shield } from "lucide-react";
+import songaLogo from "@/assets/songa-logo.png";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
