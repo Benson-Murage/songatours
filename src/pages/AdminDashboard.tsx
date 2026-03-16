@@ -1788,10 +1788,10 @@ const DiscountCodesTab = ({ tours }: { tours: any[] }) => {
             <div className="space-y-1.5"><Label>Expires</Label><Input type="date" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })} /></div>
           </div>
           <div className="space-y-1.5"><Label>Applicable Tour (optional)</Label>
-            <Select value={form.applicable_tour_id} onValueChange={(v) => setForm({ ...form, applicable_tour_id: v })}>
+             <Select value={form.applicable_tour_id || "all"} onValueChange={(v) => setForm({ ...form, applicable_tour_id: v === "all" ? "" : v })}>
               <SelectTrigger><SelectValue placeholder="All tours" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All tours</SelectItem>
+                <SelectItem value="all">All tours</SelectItem>
                 {tours.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
               </SelectContent>
             </Select>
