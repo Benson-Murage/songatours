@@ -1,15 +1,15 @@
 import { Link } from "react-router-dom";
-import { MapPin, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
+import songaLogo from "@/assets/songa-logo.png";
 
 const NotFound = () => (
   <Layout>
     <div className="container mx-auto px-4 py-20 text-center">
       <div className="mx-auto max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <MapPin className="h-8 w-8 text-accent" />
-          <span className="text-2xl font-bold">Songa</span>
+        <div className="mb-6 flex justify-center">
+          <img src={songaLogo} alt="Songa Travel & Tours" className="h-16 w-auto" />
         </div>
         <h1 className="text-7xl font-extrabold text-foreground mb-4">404</h1>
         <h2 className="text-xl font-semibold text-foreground mb-2">Page not found</h2>

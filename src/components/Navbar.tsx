@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, MapPin, User, LogOut, Briefcase, Shield, Car } from "lucide-react";
+import { Menu, LogOut, Briefcase, Shield } from "lucide-react";
+import songaLogo from "@/assets/songa-logo.png";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -31,9 +32,8 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 glass">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <MapPin className="h-6 w-6 text-accent" />
-          <span className="text-xl font-bold tracking-tight text-foreground">Songa</span>
+        <Link to="/" className="flex items-center gap-1">
+          <img src={songaLogo} alt="Songa Travel & Tours" className="h-10 w-auto" />
         </Link>
 
         <div className="hidden items-center gap-6 md:flex">
@@ -88,8 +88,7 @@ const Navbar = () => {
           <SheetContent side="right" className="w-72 p-0">
             <div className="flex h-full flex-col">
               <div className="flex items-center gap-2 border-b border-border p-4">
-                <MapPin className="h-5 w-5 text-accent" />
-                <span className="text-lg font-bold">Songa</span>
+                <img src={songaLogo} alt="Songa Travel & Tours" className="h-9 w-auto" />
               </div>
               <div className="flex flex-1 flex-col gap-1 p-4">
                 {navLinks.map((link) => (
