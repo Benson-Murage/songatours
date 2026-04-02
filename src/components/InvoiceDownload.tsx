@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 
 interface InvoiceData {
   booking_reference: string;
