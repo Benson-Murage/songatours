@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
-import songaLogo from "@/assets/songa-logo.png";
+import AppLogo from "@/components/AppLogo";
 
 const NotFound = () => (
   <Layout>
