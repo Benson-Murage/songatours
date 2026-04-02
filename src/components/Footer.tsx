@@ -22,7 +22,7 @@ const Footer = () => {
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="mb-4">
-              <img src={songaLogo} alt="Songa Travel & Tours" className="h-12 w-auto" />
+              <AppLogo size="lg" linkTo={false} />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
               Premium African travel experiences. Discover breathtaking destinations and create unforgettable memories.

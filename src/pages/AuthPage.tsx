@@ -100,7 +100,7 @@ const AuthPage = () => {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <img src={songaLogo} alt="Songa Travel & Tours" className="h-16 w-auto" />
+            <AppLogo size="xl" linkTo={false} />
           </div>
           <h1 className="text-2xl font-bold">
             {mode === "login" ? "Welcome back" : mode === "signup" ? "Create your account" : "Reset password"}

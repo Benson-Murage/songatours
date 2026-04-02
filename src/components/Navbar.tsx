@@ -86,7 +86,7 @@ const Navbar = () => {
           <SheetContent side="right" className="w-72 p-0">
             <div className="flex h-full flex-col">
               <div className="flex items-center gap-2 border-b border-border p-4">
-                <img src={songaLogo} alt="Songa Travel & Tours" className="h-9 w-auto" />
+                <AppLogo size="sm" linkTo={false} />
               </div>
               <div className="flex flex-1 flex-col gap-1 p-4">
                 {navLinks.map((link) => (
