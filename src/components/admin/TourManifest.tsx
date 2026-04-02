@@ -102,7 +102,11 @@ const TourManifest = ({ tours }: Props) => {
   @media print { body { padding: 20px; } }
 </style>
 </head><body>
-<h1>🗺️ Tour Manifest — ${tourTitle}</h1>
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+<img src="${LOGO_BASE64}" alt="Songa Travel & Tours" style="height:50px;" />
+<div><h1 style="margin:0;">Tour Manifest — ${tourTitle}</h1>
+<p style="margin:4px 0 0;color:#666;font-size:13px;">Songa Travel & Tours • +254 796 102 412</p></div>
+</div>
 <p class="meta">${selectedDate ? `Departure: ${new Date(selectedDate).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })}` : "All Dates"} • ${filtered.length} participant(s)</p>
 <table>
   <thead><tr>
