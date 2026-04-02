@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 
 interface InvoiceData {
   booking_reference: string;
@@ -52,7 +53,7 @@ const InvoiceDownload = ({ data }: { data: InvoiceData }) => {
 </style></head><body>
   <div class="header">
     <div>
-      <img src="/icons/songa-logo.png" alt="Songa Travel & Tours" style="height:60px;margin-bottom:8px;" />
+      <img src="${LOGO_BASE64}" alt="Songa Travel & Tours" style="height:60px;margin-bottom:8px;" />
       <p class="meta">Nairobi, Kenya<br>+254 796 102 412<br>salmajeods11@gmail.com</p>
     </div>
     <div style="text-align: right;">
