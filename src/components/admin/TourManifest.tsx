@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Download, Search, Copy, FileText, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { formatKES } from "@/lib/formatKES";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 
 interface Props {
   tours: any[];
