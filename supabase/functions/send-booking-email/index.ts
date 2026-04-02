@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
       : `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <div style="text-align: center; margin-bottom: 32px;">
-          <h1 style="color: #0F766E; font-size: 24px; margin: 0;">Songa Travel & Tours</h1>
+          <img src="https://songatours.lovable.app/icons/songa-logo.png" alt="Songa Travel & Tours" style="height:50px;margin-bottom:8px;" />
+        </div>
         </div>
         <div style="background: #fef2f2; border-radius: 12px; padding: 32px;">
           <h2 style="color: #111827; font-size: 20px; margin: 0 0 8px;">Booking Cancelled</h2>
