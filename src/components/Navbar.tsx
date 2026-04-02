@@ -32,9 +32,7 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 glass">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-1">
-          <img src={songaLogo} alt="Songa Travel & Tours" className="h-10 w-auto" />
-        </Link>
+        <AppLogo size="md" />
 
         <div className="hidden items-center gap-6 md:flex">
           {navLinks.map((link) => (
