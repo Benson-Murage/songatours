@@ -628,9 +628,9 @@ const TourDetailPage = () => {
             </Tabs>
           </div>
 
-          {/* Booking sidebar */}
-          <aside className="hidden lg:block lg:sticky lg:top-24 h-fit">
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+          {/* Booking sidebar — visible on mobile too so users can fill the form */}
+          <aside id="booking-form" className="lg:sticky lg:top-24 h-fit scroll-mt-24">
+            <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-4">
               {isCanceled && (
                 <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" /> This tour has been canceled
