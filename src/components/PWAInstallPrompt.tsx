@@ -40,7 +40,10 @@ const PWAInstallPrompt = () => {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md animate-fade-in">
+    <div
+      className="fixed left-4 right-4 z-30 mx-auto max-w-md animate-fade-in"
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 6rem)" }}
+    >
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-lg">
         <div className="rounded-xl bg-primary/10 p-2.5 shrink-0">
           <Download className="h-5 w-5 text-primary" />
