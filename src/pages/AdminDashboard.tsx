@@ -108,7 +108,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, booking_reference, discount_amount, payment_status, payment_method, deposit_amount, balance_due, tours(title, category, destinations(name))")
+        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, booking_reference, discount_amount, payment_status, payment_method, deposit_amount, balance_due, amount_paid, overpayment_amount, tours(title, category, destinations(name))")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -130,13 +130,13 @@ const AdminDashboard = () => {
 
   const stats = useMemo(() => {
     const nonCancelled = (adminBookings || []).filter((b: any) => b.status !== "cancelled");
-    const totalRevenue = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.deposit_amount || 0), 0);
+    const totalRevenue = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.amount_paid ?? b.deposit_amount ?? 0), 0);
     const activeBookings = nonCancelled.length;
     const cancelledBookings = (adminBookings || []).filter((b: any) => b.status === "cancelled").length;
     const canceledTours = (adminTours || []).filter((t: any) => t.status === "canceled").length;
     const activeTours = (adminTours || []).filter((t: any) => t.status === "published").length;
     const outstandingBalance = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.balance_due || 0), 0);
-    const fullyPaid = nonCancelled.filter((b: any) => b.payment_status === "paid").length;
+    const fullyPaid = nonCancelled.filter((b: any) => b.payment_status === "paid" || b.payment_status === "overpaid").length;
     const partialPaid = nonCancelled.filter((b: any) => b.payment_status === "partial").length;
     return {
       totalRevenue,
@@ -324,24 +324,27 @@ const AdminDashboard = () => {
       bookingId: string; amount: number; method: string; reference: string; totalPrice: number; reason: string; isEdit: boolean;
     }) => {
       const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
-      const oldDepositAmount = Number(booking?.deposit_amount || 0);
+      const oldAmountPaid = Number(booking?.amount_paid ?? booking?.deposit_amount ?? 0);
       const oldPaymentStatus = booking?.payment_status || "pending";
       const oldPaymentMethod = booking?.payment_method || null;
 
-      const newTotalPaid = isEdit ? amount : oldDepositAmount + amount;
+      const newTotalPaid = isEdit ? amount : oldAmountPaid + amount;
       const overpayment = Math.max(0, newTotalPaid - totalPrice);
-      const newPaymentStatus = newTotalPaid >= totalPrice ? "paid" : newTotalPaid > 0 ? "partial" : "pending";
+      const newPaymentStatus =
+        newTotalPaid <= 0 ? "pending"
+        : newTotalPaid < totalPrice ? "partial"
+        : newTotalPaid === totalPrice ? "paid"
+        : "overpaid";
       const newBookingStatus = newTotalPaid >= totalPrice ? "paid" : "pending";
-      const balanceDue = Math.max(0, totalPrice - newTotalPaid);
 
+      // Only set amount_paid + method/reference + status. The DB trigger
+      // recomputes balance_due, deposit_amount, overpayment_amount, payment_status.
       const { error } = await supabase
         .from("bookings")
         .update({
-          payment_status: newPaymentStatus,
+          amount_paid: newTotalPaid,
           payment_method: method,
           payment_reference: reference || null,
-          deposit_amount: newTotalPaid,
-          balance_due: balanceDue,
           status: newBookingStatus as any,
         } as any)
         .eq("id", bookingId);
@@ -350,7 +353,7 @@ const AdminDashboard = () => {
       await supabase.from("payment_audit_logs" as any).insert({
         booking_id: bookingId,
         admin_user_id: user!.id,
-        old_amount_paid: oldDepositAmount,
+        old_amount_paid: oldAmountPaid,
         new_amount_paid: newTotalPaid,
         old_payment_status: oldPaymentStatus,
         new_payment_status: newPaymentStatus,
@@ -360,6 +363,7 @@ const AdminDashboard = () => {
       });
 
       if (booking?.bookedByProfile?.email) {
+        const transactionAmount = isEdit ? newTotalPaid - oldAmountPaid : amount;
         supabase.functions.invoke("send-booking-email", {
           body: {
             to_email: booking.bookedByProfile.email,
@@ -370,8 +374,13 @@ const AdminDashboard = () => {
             start_date: booking.start_date,
             guests_count: booking.guests_count,
             total_price: booking.total_price,
-            whatsapp_group_link: null,
-            type: "confirmation",
+            amount_paid_now: transactionAmount,
+            total_paid: newTotalPaid,
+            balance_due: Math.max(0, totalPrice - newTotalPaid),
+            overpayment: overpayment,
+            payment_method: method,
+            payment_reference: reference || null,
+            type: "payment_update",
           },
         }).catch(() => {});
       }
@@ -388,6 +397,7 @@ const AdminDashboard = () => {
       setPaymentForm({ amount: "", method: "mpesa", reference: "", reason: "" });
       setPaymentEditMode(false);
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-audit-logs"] });
     },
     onError: () => toast.error("Failed to confirm payment"),
   });
