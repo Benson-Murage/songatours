@@ -766,9 +766,12 @@ const TourDetailPage = () => {
 
       {/* Mobile bottom bar */}
       {!isCanceled && !soldOut && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden">
-          <div className="flex items-center justify-between gap-4">
-            <div>
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card px-4 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
               {hasDiscount ? (
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-xs text-muted-foreground line-through">{formatKES(tour.price_per_person)}</span>
@@ -781,13 +784,27 @@ const TourDetailPage = () => {
                   <span className="text-xs text-muted-foreground">/ person</span>
                 </div>
               )}
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground truncate">
                 {isFixedDate
                   ? `Departs ${format(new Date(tour.departure_date!), "MMM d")}`
                   : "Free cancellation"}
               </p>
             </div>
-            <Button variant="accent" size="lg" onClick={handleBook} disabled={booking} className="shrink-0">
+            <Button
+              variant="accent"
+              size="lg"
+              onClick={() => {
+                const bookingDate = isFixedDate ? tour.departure_date! : startDate;
+                if (!bookingDate || !phoneNumber.trim()) {
+                  document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  validateBooking();
+                  return;
+                }
+                handleBook();
+              }}
+              disabled={booking}
+              className="shrink-0 min-h-[48px] px-6 pointer-events-auto active:scale-[0.98] transition-transform"
+            >
               {booking && <Loader2 className="h-4 w-4 animate-spin" />}
               Book Now
             </Button>
@@ -796,12 +813,16 @@ const TourDetailPage = () => {
       )}
 
       {soldOut && !isCanceled && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-destructive/10 p-4 lg:hidden text-center">
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-destructive/10 px-4 pt-4 lg:hidden text-center"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+        >
           <p className="font-semibold text-destructive">This departure is sold out</p>
         </div>
       )}
 
-      <div className="h-20 lg:hidden" />
+      {/* Spacer so content isn't hidden behind the fixed bottom bar */}
+      <div className="h-24 lg:hidden" />
 
       {/* Booking Confirmation Modal */}
       <Dialog open={!!whatsappModal} onOpenChange={(open) => {
