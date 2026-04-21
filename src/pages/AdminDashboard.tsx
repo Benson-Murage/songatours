@@ -108,7 +108,7 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, booking_reference, discount_amount, payment_status, payment_method, deposit_amount, balance_due, tours(title, category, destinations(name))")
+        .select("id, created_at, start_date, end_date, guests_count, total_price, status, phone_number, special_requests, user_id, cancelled_by, cancelled_at, tour_id, booking_reference, discount_amount, payment_status, payment_method, deposit_amount, balance_due, amount_paid, overpayment_amount, tours(title, category, destinations(name))")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -130,13 +130,13 @@ const AdminDashboard = () => {
 
   const stats = useMemo(() => {
     const nonCancelled = (adminBookings || []).filter((b: any) => b.status !== "cancelled");
-    const totalRevenue = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.deposit_amount || 0), 0);
+    const totalRevenue = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.amount_paid ?? b.deposit_amount ?? 0), 0);
     const activeBookings = nonCancelled.length;
     const cancelledBookings = (adminBookings || []).filter((b: any) => b.status === "cancelled").length;
     const canceledTours = (adminTours || []).filter((t: any) => t.status === "canceled").length;
     const activeTours = (adminTours || []).filter((t: any) => t.status === "published").length;
     const outstandingBalance = nonCancelled.reduce((sum: number, b: any) => sum + Number(b.balance_due || 0), 0);
-    const fullyPaid = nonCancelled.filter((b: any) => b.payment_status === "paid").length;
+    const fullyPaid = nonCancelled.filter((b: any) => b.payment_status === "paid" || b.payment_status === "overpaid").length;
     const partialPaid = nonCancelled.filter((b: any) => b.payment_status === "partial").length;
     return {
       totalRevenue,
@@ -324,24 +324,27 @@ const AdminDashboard = () => {
       bookingId: string; amount: number; method: string; reference: string; totalPrice: number; reason: string; isEdit: boolean;
     }) => {
       const booking = (adminBookings || []).find((b: any) => b.id === bookingId);
-      const oldDepositAmount = Number(booking?.deposit_amount || 0);
+      const oldAmountPaid = Number(booking?.amount_paid ?? booking?.deposit_amount ?? 0);
       const oldPaymentStatus = booking?.payment_status || "pending";
       const oldPaymentMethod = booking?.payment_method || null;
 
-      const newTotalPaid = isEdit ? amount : oldDepositAmount + amount;
+      const newTotalPaid = isEdit ? amount : oldAmountPaid + amount;
       const overpayment = Math.max(0, newTotalPaid - totalPrice);
-      const newPaymentStatus = newTotalPaid >= totalPrice ? "paid" : newTotalPaid > 0 ? "partial" : "pending";
+      const newPaymentStatus =
+        newTotalPaid <= 0 ? "pending"
+        : newTotalPaid < totalPrice ? "partial"
+        : newTotalPaid === totalPrice ? "paid"
+        : "overpaid";
       const newBookingStatus = newTotalPaid >= totalPrice ? "paid" : "pending";
-      const balanceDue = Math.max(0, totalPrice - newTotalPaid);
 
+      // Only set amount_paid + method/reference + status. The DB trigger
+      // recomputes balance_due, deposit_amount, overpayment_amount, payment_status.
       const { error } = await supabase
         .from("bookings")
         .update({
-          payment_status: newPaymentStatus,
+          amount_paid: newTotalPaid,
           payment_method: method,
           payment_reference: reference || null,
-          deposit_amount: newTotalPaid,
-          balance_due: balanceDue,
           status: newBookingStatus as any,
         } as any)
         .eq("id", bookingId);
@@ -350,7 +353,7 @@ const AdminDashboard = () => {
       await supabase.from("payment_audit_logs" as any).insert({
         booking_id: bookingId,
         admin_user_id: user!.id,
-        old_amount_paid: oldDepositAmount,
+        old_amount_paid: oldAmountPaid,
         new_amount_paid: newTotalPaid,
         old_payment_status: oldPaymentStatus,
         new_payment_status: newPaymentStatus,
@@ -360,6 +363,7 @@ const AdminDashboard = () => {
       });
 
       if (booking?.bookedByProfile?.email) {
+        const transactionAmount = isEdit ? newTotalPaid - oldAmountPaid : amount;
         supabase.functions.invoke("send-booking-email", {
           body: {
             to_email: booking.bookedByProfile.email,
@@ -370,8 +374,13 @@ const AdminDashboard = () => {
             start_date: booking.start_date,
             guests_count: booking.guests_count,
             total_price: booking.total_price,
-            whatsapp_group_link: null,
-            type: "confirmation",
+            amount_paid_now: transactionAmount,
+            total_paid: newTotalPaid,
+            balance_due: Math.max(0, totalPrice - newTotalPaid),
+            overpayment: overpayment,
+            payment_method: method,
+            payment_reference: reference || null,
+            type: "payment_update",
           },
         }).catch(() => {});
       }
@@ -388,6 +397,7 @@ const AdminDashboard = () => {
       setPaymentForm({ amount: "", method: "mpesa", reference: "", reason: "" });
       setPaymentEditMode(false);
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-audit-logs"] });
     },
     onError: () => toast.error("Failed to confirm payment"),
   });
@@ -449,17 +459,20 @@ const AdminDashboard = () => {
         )}
 
         <Tabs defaultValue="tours" className="space-y-6">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="tours">Tours</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings CRM</TabsTrigger>
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="payment-history">Payment History</TabsTrigger>
-            <TabsTrigger value="discounts">Promo Codes</TabsTrigger>
-            <TabsTrigger value="referrals">Referrals</TabsTrigger>
-            <TabsTrigger value="participants">Participants</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="destinations">Destinations</TabsTrigger>
-          </TabsList>
+          {/* Mobile-scrollable, single-row tab strip with no overlap */}
+          <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-hide">
+            <TabsList className="inline-flex w-max min-w-full sm:w-auto sm:min-w-0 px-4 sm:px-0 gap-1">
+              <TabsTrigger value="tours" className="whitespace-nowrap">Tours</TabsTrigger>
+              <TabsTrigger value="bookings" className="whitespace-nowrap">Bookings</TabsTrigger>
+              <TabsTrigger value="customers" className="whitespace-nowrap">Customers</TabsTrigger>
+              <TabsTrigger value="payment-history" className="whitespace-nowrap">Payments</TabsTrigger>
+              <TabsTrigger value="discounts" className="whitespace-nowrap">Promos</TabsTrigger>
+              <TabsTrigger value="referrals" className="whitespace-nowrap">Referrals</TabsTrigger>
+              <TabsTrigger value="participants" className="whitespace-nowrap">Manifest</TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
+              <TabsTrigger value="destinations" className="whitespace-nowrap">Destinations</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ── TOURS TAB ── */}
           <TabsContent value="tours" className="space-y-4">
@@ -635,7 +648,71 @@ const AdminDashboard = () => {
             {bookingsLoading ? (
               <Skeleton className="h-56 rounded-xl" />
             ) : (
-              <div className="rounded-xl border border-border bg-card overflow-x-auto">
+              <>
+                {/* Mobile cards (sm and below) */}
+                <div className="md:hidden space-y-3">
+                  {filteredBookings.length === 0 ? (
+                    <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
+                      No bookings found
+                    </div>
+                  ) : filteredBookings.map((b: any) => (
+                    <div key={b.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{b.bookedByProfile?.full_name || "Unknown"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{b.bookedByProfile?.email || "—"}</p>
+                          <p className="text-xs text-muted-foreground">{b.phone_number || "—"}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          b.status === "paid" ? "bg-primary/10 text-primary"
+                          : b.status === "cancelled" ? "bg-destructive/10 text-destructive"
+                          : "bg-accent/10 text-accent"
+                        }`}>{b.status}</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium truncate">{b.tours?.title || "—"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(b.start_date).toLocaleDateString()} • {b.guests_count} guest{b.guests_count > 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between text-sm pt-1 border-t border-border">
+                        <div>
+                          <p className="font-semibold">{formatKES(b.total_price)}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Paid: {formatKES(b.amount_paid ?? b.deposit_amount ?? 0)}
+                            {Number(b.balance_due || 0) > 0 && ` • Bal: ${formatKES(b.balance_due)}`}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          b.payment_status === "paid" ? "bg-primary/10 text-primary"
+                          : b.payment_status === "overpaid" ? "bg-destructive/10 text-destructive"
+                          : b.payment_status === "partial" ? "bg-accent/10 text-accent"
+                          : "bg-muted text-muted-foreground"
+                        }`}>{b.payment_status || "pending"}</span>
+                      </div>
+                      {b.status !== "cancelled" && (
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="outline" size="sm" className="flex-1 h-8 text-xs"
+                            onClick={() => {
+                              setPaymentBooking(b);
+                              setPaymentEditMode(b.payment_status !== "pending");
+                              setPaymentForm({ amount: String(b.balance_due != null && Number(b.balance_due) > 0 ? b.balance_due : b.total_price), method: b.payment_method || "mpesa", reference: "", reason: "" });
+                            }}
+                          >
+                            <CreditCard className="mr-1 h-3 w-3" /> Payment
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-8 text-xs text-destructive" onClick={() => setBookingToCancel(b)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table (md and up) */}
+                <div className="hidden md:block rounded-xl border border-border bg-card overflow-x-auto">
                 <table className="w-full min-w-[1400px] text-sm">
                   <thead className="bg-muted/50">
                     <tr className="text-left">
@@ -681,13 +758,20 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                             b.payment_status === "paid" ? "bg-primary/10 text-primary"
+                            : b.payment_status === "overpaid" ? "bg-destructive/10 text-destructive"
                             : b.payment_status === "partial" ? "bg-accent/10 text-accent"
                             : "bg-muted text-muted-foreground"
                           }`}>
                             {b.payment_status || "pending"}
                           </span>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Paid: {formatKES(b.amount_paid ?? b.deposit_amount ?? 0)}
+                          </p>
                           {b.balance_due != null && Number(b.balance_due) > 0 && b.status !== "cancelled" && (
-                            <p className="text-[10px] text-muted-foreground mt-0.5">Bal: {formatKES(b.balance_due)}</p>
+                            <p className="text-[10px] text-muted-foreground">Bal: {formatKES(b.balance_due)}</p>
+                          )}
+                          {Number(b.overpayment_amount || 0) > 0 && (
+                            <p className="text-[10px] text-destructive font-medium">Over: {formatKES(b.overpayment_amount)}</p>
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -703,7 +787,7 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-4 py-3">
                           {b.status !== "cancelled" && (
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 flex-wrap">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -737,8 +821,9 @@ const AdminDashboard = () => {
                                 price_per_person: Number(b.total_price) / b.guests_count,
                                 total_price: Number(b.total_price),
                                 discount_amount: Number((b as any).discount_amount || 0),
-                                amount_paid: Number(b.deposit_amount || 0),
+                                amount_paid: Number(b.amount_paid ?? b.deposit_amount ?? 0),
                                 balance_due: Number(b.balance_due || 0),
+                                overpayment_amount: Number(b.overpayment_amount || 0),
                                 payment_status: b.payment_status || (b.status === "paid" ? "paid" : "pending"),
                                 payment_method: b.payment_method || undefined,
                                 created_at: b.created_at,
@@ -755,7 +840,8 @@ const AdminDashboard = () => {
                     )}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </TabsContent>
 

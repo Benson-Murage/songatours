@@ -17,6 +17,7 @@ interface InvoiceData {
   discount_amount?: number;
   amount_paid?: number;
   balance_due?: number;
+  overpayment_amount?: number;
   payment_status: string;
   payment_method?: string;
   created_at: string;
@@ -76,6 +77,7 @@ const InvoiceDownload = ({ data }: { data: InvoiceData }) => {
         <tr class="total-row"><td colspan="2">Total</td><td style="text-align:right;">${formatKES(data.total_price)}</td></tr>
         ${data.amount_paid != null && data.amount_paid > 0 ? `<tr><td colspan="2" style="font-size:14px;">Amount Paid</td><td style="text-align:right;color:#059669;font-size:14px;font-weight:600;">${formatKES(data.amount_paid)}</td></tr>` : ''}
         ${data.balance_due != null && data.balance_due > 0 ? `<tr><td colspan="2" style="font-size:14px;">Balance Due</td><td style="text-align:right;color:#D97706;font-size:14px;font-weight:600;">${formatKES(data.balance_due)}</td></tr>` : ''}
+        ${data.overpayment_amount != null && data.overpayment_amount > 0 ? `<tr><td colspan="2" style="font-size:14px;">Overpayment</td><td style="text-align:right;color:#b91c1c;font-size:14px;font-weight:600;">${formatKES(data.overpayment_amount)}</td></tr>` : ''}
       </tbody>
     </table>
   </div>
