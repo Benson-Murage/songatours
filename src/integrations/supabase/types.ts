@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          amount_paid: number
           balance_due: number | null
           booking_reference: string | null
           cancelled_at: string | null
@@ -27,6 +28,7 @@ export type Database = {
           end_date: string | null
           guests_count: number
           id: string
+          overpayment_amount: number
           payment_method: string | null
           payment_reference: string | null
           payment_status: string
@@ -40,6 +42,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          amount_paid?: number
           balance_due?: number | null
           booking_reference?: string | null
           cancelled_at?: string | null
@@ -51,6 +54,7 @@ export type Database = {
           end_date?: string | null
           guests_count?: number
           id?: string
+          overpayment_amount?: number
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
@@ -64,6 +68,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          amount_paid?: number
           balance_due?: number | null
           booking_reference?: string | null
           cancelled_at?: string | null
@@ -75,6 +80,7 @@ export type Database = {
           end_date?: string | null
           guests_count?: number
           id?: string
+          overpayment_amount?: number
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
