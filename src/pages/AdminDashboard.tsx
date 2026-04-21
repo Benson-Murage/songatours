@@ -16,6 +16,7 @@ import InvoiceDownload from "@/components/InvoiceDownload";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import Layout from "@/components/Layout";
 import TourManifest from "@/components/admin/TourManifest";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -799,12 +800,16 @@ const AdminDashboard = () => {
 
           {/* ── DISCOUNTS TAB ── */}
           <TabsContent value="discounts" className="space-y-4">
-            <DiscountCodesTab tours={adminTours || []} />
+            <ErrorBoundary fallbackTitle="Promo codes failed to load">
+              <DiscountCodesTab tours={adminTours || []} />
+            </ErrorBoundary>
           </TabsContent>
 
           {/* ── REFERRALS TAB ── */}
           <TabsContent value="referrals" className="space-y-4">
-            <ReferralsTab />
+            <ErrorBoundary fallbackTitle="Referrals failed to load">
+              <ReferralsTab />
+            </ErrorBoundary>
           </TabsContent>
 
           {/* ── PARTICIPANTS & MANIFEST TAB ── */}
@@ -1741,21 +1746,43 @@ const DiscountCodesTab = ({ tours }: { tours: any[] }) => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.code.trim() || !form.discount_value) { toast.error("Code and value are required"); return; }
+    const code = form.code.trim().toUpperCase();
+    const value = Number(form.discount_value);
+    if (!code) { toast.error("Promo code is required"); return; }
+    if (!Number.isFinite(value) || value <= 0) { toast.error("Discount value must be a positive number"); return; }
+    if (form.discount_type === "percentage" && value > 100) { toast.error("Percentage cannot exceed 100"); return; }
+    const maxUses = form.max_uses ? Number(form.max_uses) : null;
+    if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) {
+      toast.error("Max uses must be a whole number"); return;
+    }
+    // Normalize "YYYY-MM-DD" → end-of-day ISO timestamp so it's clearly future-valid
+    let expiresAt: string | null = null;
+    if (form.expires_at) {
+      const d = new Date(`${form.expires_at}T23:59:59`);
+      if (isNaN(d.getTime())) { toast.error("Invalid expiry date"); return; }
+      expiresAt = d.toISOString();
+    }
     createCode.mutate({
-      code: form.code,
+      code,
       discount_type: form.discount_type,
-      discount_value: Number(form.discount_value),
-      max_uses: form.max_uses ? Number(form.max_uses) : null,
+      discount_value: value,
+      max_uses: maxUses,
       applicable_tour_id: form.applicable_tour_id || null,
-      expires_at: form.expires_at || null,
+      expires_at: expiresAt,
     }, {
       onSuccess: () => {
         toast.success("Promo code created");
         setShowCreate(false);
         setForm({ code: "", discount_type: "percentage", discount_value: "", max_uses: "", applicable_tour_id: "", expires_at: "" });
       },
-      onError: () => toast.error("Failed to create code — it may already exist"),
+      onError: (err: any) => {
+        const msg = err?.message || "";
+        if (msg.toLowerCase().includes("duplicate") || msg.includes("23505")) {
+          toast.error("A promo code with this name already exists");
+        } else {
+          toast.error(msg || "Failed to create promo code");
+        }
+      },
     });
   };
 
