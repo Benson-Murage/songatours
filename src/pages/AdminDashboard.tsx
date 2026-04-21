@@ -823,6 +823,7 @@ const AdminDashboard = () => {
                                 discount_amount: Number((b as any).discount_amount || 0),
                                 amount_paid: Number(b.amount_paid ?? b.deposit_amount ?? 0),
                                 balance_due: Number(b.balance_due || 0),
+                                overpayment_amount: Number(b.overpayment_amount || 0),
                                 payment_status: b.payment_status || (b.status === "paid" ? "paid" : "pending"),
                                 payment_method: b.payment_method || undefined,
                                 created_at: b.created_at,
