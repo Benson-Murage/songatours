@@ -459,17 +459,20 @@ const AdminDashboard = () => {
         )}
 
         <Tabs defaultValue="tours" className="space-y-6">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="tours">Tours</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings CRM</TabsTrigger>
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="payment-history">Payment History</TabsTrigger>
-            <TabsTrigger value="discounts">Promo Codes</TabsTrigger>
-            <TabsTrigger value="referrals">Referrals</TabsTrigger>
-            <TabsTrigger value="participants">Participants</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="destinations">Destinations</TabsTrigger>
-          </TabsList>
+          {/* Mobile-scrollable, single-row tab strip with no overlap */}
+          <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-hide">
+            <TabsList className="inline-flex w-max min-w-full sm:w-auto sm:min-w-0 px-4 sm:px-0 gap-1">
+              <TabsTrigger value="tours" className="whitespace-nowrap">Tours</TabsTrigger>
+              <TabsTrigger value="bookings" className="whitespace-nowrap">Bookings</TabsTrigger>
+              <TabsTrigger value="customers" className="whitespace-nowrap">Customers</TabsTrigger>
+              <TabsTrigger value="payment-history" className="whitespace-nowrap">Payments</TabsTrigger>
+              <TabsTrigger value="discounts" className="whitespace-nowrap">Promos</TabsTrigger>
+              <TabsTrigger value="referrals" className="whitespace-nowrap">Referrals</TabsTrigger>
+              <TabsTrigger value="participants" className="whitespace-nowrap">Manifest</TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
+              <TabsTrigger value="destinations" className="whitespace-nowrap">Destinations</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ── TOURS TAB ── */}
           <TabsContent value="tours" className="space-y-4">
@@ -645,7 +648,71 @@ const AdminDashboard = () => {
             {bookingsLoading ? (
               <Skeleton className="h-56 rounded-xl" />
             ) : (
-              <div className="rounded-xl border border-border bg-card overflow-x-auto">
+              <>
+                {/* Mobile cards (sm and below) */}
+                <div className="md:hidden space-y-3">
+                  {filteredBookings.length === 0 ? (
+                    <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
+                      No bookings found
+                    </div>
+                  ) : filteredBookings.map((b: any) => (
+                    <div key={b.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{b.bookedByProfile?.full_name || "Unknown"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{b.bookedByProfile?.email || "—"}</p>
+                          <p className="text-xs text-muted-foreground">{b.phone_number || "—"}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          b.status === "paid" ? "bg-primary/10 text-primary"
+                          : b.status === "cancelled" ? "bg-destructive/10 text-destructive"
+                          : "bg-accent/10 text-accent"
+                        }`}>{b.status}</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium truncate">{b.tours?.title || "—"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(b.start_date).toLocaleDateString()} • {b.guests_count} guest{b.guests_count > 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between text-sm pt-1 border-t border-border">
+                        <div>
+                          <p className="font-semibold">{formatKES(b.total_price)}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Paid: {formatKES(b.amount_paid ?? b.deposit_amount ?? 0)}
+                            {Number(b.balance_due || 0) > 0 && ` • Bal: ${formatKES(b.balance_due)}`}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          b.payment_status === "paid" ? "bg-primary/10 text-primary"
+                          : b.payment_status === "overpaid" ? "bg-destructive/10 text-destructive"
+                          : b.payment_status === "partial" ? "bg-accent/10 text-accent"
+                          : "bg-muted text-muted-foreground"
+                        }`}>{b.payment_status || "pending"}</span>
+                      </div>
+                      {b.status !== "cancelled" && (
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="outline" size="sm" className="flex-1 h-8 text-xs"
+                            onClick={() => {
+                              setPaymentBooking(b);
+                              setPaymentEditMode(b.payment_status !== "pending");
+                              setPaymentForm({ amount: String(b.balance_due != null && Number(b.balance_due) > 0 ? b.balance_due : b.total_price), method: b.payment_method || "mpesa", reference: "", reason: "" });
+                            }}
+                          >
+                            <CreditCard className="mr-1 h-3 w-3" /> Payment
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-8 text-xs text-destructive" onClick={() => setBookingToCancel(b)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table (md and up) */}
+                <div className="hidden md:block rounded-xl border border-border bg-card overflow-x-auto">
                 <table className="w-full min-w-[1400px] text-sm">
                   <thead className="bg-muted/50">
                     <tr className="text-left">
@@ -691,13 +758,20 @@ const AdminDashboard = () => {
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                             b.payment_status === "paid" ? "bg-primary/10 text-primary"
+                            : b.payment_status === "overpaid" ? "bg-destructive/10 text-destructive"
                             : b.payment_status === "partial" ? "bg-accent/10 text-accent"
                             : "bg-muted text-muted-foreground"
                           }`}>
                             {b.payment_status || "pending"}
                           </span>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Paid: {formatKES(b.amount_paid ?? b.deposit_amount ?? 0)}
+                          </p>
                           {b.balance_due != null && Number(b.balance_due) > 0 && b.status !== "cancelled" && (
-                            <p className="text-[10px] text-muted-foreground mt-0.5">Bal: {formatKES(b.balance_due)}</p>
+                            <p className="text-[10px] text-muted-foreground">Bal: {formatKES(b.balance_due)}</p>
+                          )}
+                          {Number(b.overpayment_amount || 0) > 0 && (
+                            <p className="text-[10px] text-destructive font-medium">Over: {formatKES(b.overpayment_amount)}</p>
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -713,7 +787,7 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-4 py-3">
                           {b.status !== "cancelled" && (
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 flex-wrap">
                               <Button
                                 variant="ghost"
                                 size="sm"
