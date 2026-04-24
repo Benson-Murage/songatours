@@ -104,11 +104,16 @@ const TourCard = ({ tour }: TourCardProps) => {
             {tour.description}
           </p>
 
-          {/* Fixed date badge */}
-          {tour.is_fixed_date && tour.departure_date && (
+          {/* Fixed date badge — hidden when sold out (booking actions are disabled) */}
+          {tour.is_fixed_date && tour.departure_date && !isSoldOut && (
             <div className="mt-2 flex items-center gap-1 text-xs text-primary font-medium">
               <CalendarDays className="h-3 w-3" />
               Departs {format(new Date(tour.departure_date), "MMM d, yyyy")}
+            </div>
+          )}
+          {isSoldOut && (
+            <div className="mt-2 text-xs font-semibold text-destructive">
+              No seats available for this departure
             </div>
           )}
 
