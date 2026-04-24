@@ -60,14 +60,20 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Newsletter</h4>
+            <h4 className="font-semibold mb-4">Support</h4>
             <p className="text-sm text-muted-foreground mb-3">
-              Get the latest deals & travel inspiration.
+              Questions? We'd love to help.
             </p>
-            <form onSubmit={handleNewsletter} className="flex gap-2">
+            <a
+              href="mailto:salmajeods11@gmail.com"
+              className="text-sm font-medium text-primary hover:underline break-all"
+            >
+              salmajeods11@gmail.com
+            </a>
+            <form onSubmit={handleNewsletter} className="mt-4 flex gap-2">
               <Input
                 type="email"
-                placeholder="Your email"
+                placeholder="Newsletter email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="text-sm"
