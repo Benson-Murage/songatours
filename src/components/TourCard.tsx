@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Heart, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
-import { useFavorites, useToggleFavorite } from "@/hooks/useTours";
+import { useFavorites, useToggleFavorite, useTourCapacity } from "@/hooks/useTours";
 import type { Tour } from "@/hooks/useTours";
 import { toast } from "sonner";
 import { formatKES } from "@/lib/formatKES";
