@@ -667,7 +667,7 @@ const TourDetailPage = () => {
                 <span className="text-sm text-muted-foreground">/ person</span>
               </div>
 
-              {!isCanceled && !soldOut && (
+              {!isCanceled && !isCompleted && !soldOut && (
                 <div className="space-y-3">
                   <DateSelector />
                   <div className="space-y-1.5">
@@ -736,7 +736,7 @@ const TourDetailPage = () => {
                 </div>
               )}
 
-              {!isCanceled && !soldOut && (
+              {!isCanceled && !isCompleted && !soldOut && (
                 <>
                   <div className="space-y-2 border-t border-border pt-3 text-sm">
                     <div className="flex justify-between">
@@ -770,7 +770,7 @@ const TourDetailPage = () => {
                 </>
               )}
 
-              {soldOut && !isCanceled && (
+              {soldOut && !isCanceled && !isCompleted && (
                 <div className="rounded-lg bg-destructive/10 p-4 text-center">
                   <AlertTriangle className="h-6 w-6 text-destructive mx-auto mb-2" />
                   <p className="font-semibold text-destructive">Sold Out</p>
@@ -783,7 +783,7 @@ const TourDetailPage = () => {
       </div>
 
       {/* Mobile bottom bar */}
-      {!isCanceled && !soldOut && (
+      {!isCanceled && !isCompleted && !soldOut && (
         <div
           className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card px-4 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
@@ -830,7 +830,7 @@ const TourDetailPage = () => {
         </div>
       )}
 
-      {soldOut && !isCanceled && (
+      {soldOut && !isCanceled && !isCompleted && (
         <div
           className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-destructive/10 px-4 pt-4 lg:hidden text-center"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
