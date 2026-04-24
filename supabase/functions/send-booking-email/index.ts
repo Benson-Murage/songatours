@@ -36,7 +36,7 @@ interface BookingEmailPayload {
 }
 
 const LOGO_URL = "https://songatours.lovable.app/icons/songa-logo.png";
-const SUPPORT_EMAIL = "info@songatravel.com";
+const SUPPORT_EMAIL = "salmajeods11@gmail.com";
 const WHATSAPP = "+254 796 102 412";
 
 Deno.serve(async (req) => {

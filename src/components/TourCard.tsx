@@ -20,6 +20,9 @@ const TourCard = ({ tour }: TourCardProps) => {
   const toggleFavorite = useToggleFavorite();
   const isFavorited = favorites?.includes(tour.id) ?? false;
   const hasDiscount = tour.discount_price != null && tour.discount_price < tour.price_per_person;
+  const isCompleted = tour.status === "completed" ||
+    (tour.is_fixed_date && tour.departure_date && new Date(tour.departure_date) < new Date(new Date().toDateString()));
+  const isCanceled = tour.status === "canceled";
 
   const displayImage = tour.tour_images?.sort((a, b) => a.display_order - b.display_order)?.[0]?.image_url
     || tour.image_url
@@ -57,11 +60,19 @@ const TourCard = ({ tour }: TourCardProps) => {
               }`}
             />
           </button>
-          {hasDiscount && (
+          {isCanceled ? (
+            <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
+              Cancelled
+            </span>
+          ) : isCompleted ? (
+            <span className="absolute left-3 top-3 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+              Completed
+            </span>
+          ) : hasDiscount ? (
             <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
               Deal
             </span>
-          )}
+          ) : null}
           {tour.category && tour.category !== "safari" && (
             <span className="absolute left-3 bottom-3 rounded-full bg-card/80 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-foreground capitalize">
               {tour.category === "roadtrip" ? "Road Trip" : tour.category}

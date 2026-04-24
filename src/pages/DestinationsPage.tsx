@@ -87,6 +87,20 @@ const DestinationsPage = () => {
     return result;
   }, [tours, guestsFilter, searchQuery, difficultyFilter, durationFilter, priceFilter]);
 
+  const { upcomingTours, pastTours } = useMemo(() => {
+    const todayStart = new Date(new Date().toDateString());
+    const upcoming: typeof filteredTours = [];
+    const past: typeof filteredTours = [];
+    for (const t of filteredTours) {
+      const isPast =
+        t.status === "completed" ||
+        (t.is_fixed_date && t.departure_date && new Date(t.departure_date) < todayStart);
+      if (isPast) past.push(t);
+      else upcoming.push(t);
+    }
+    return { upcomingTours: upcoming, pastTours: past };
+  }, [filteredTours]);
+
   const hasActiveFilters = !!activeSlug || !!guestsFilter || (!!categoryFilter && categoryFilter !== "all") || (!!difficultyFilter && difficultyFilter !== "all") || (!!durationFilter && durationFilter !== "all") || (!!priceFilter && priceFilter !== "all");
 
   const clearFilters = () => { setSearchParams({}); setSearchQuery(""); };
@@ -222,10 +236,31 @@ const DestinationsPage = () => {
           </div>
         ) : filteredTours.length > 0 ? (
           <>
-            <p className="text-sm text-muted-foreground mb-4">{filteredTours.length} tour{filteredTours.length > 1 ? "s" : ""} found</p>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
-            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              {filteredTours.length} tour{filteredTours.length > 1 ? "s" : ""} found
+              {pastTours.length > 0 && ` (${upcomingTours.length} upcoming, ${pastTours.length} past)`}
+            </p>
+
+            {upcomingTours.length > 0 && (
+              <>
+                {pastTours.length > 0 && (
+                  <h2 className="text-xl font-semibold mb-3">Upcoming Tours</h2>
+                )}
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {upcomingTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
+                </div>
+              </>
+            )}
+
+            {pastTours.length > 0 && (
+              <div className="mt-12">
+                <h2 className="text-xl font-semibold mb-1">Past Tours</h2>
+                <p className="text-sm text-muted-foreground mb-4">These departures have already taken place.</p>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 opacity-80">
+                  {pastTours.map((tour) => <TourCard key={tour.id} tour={tour} />)}
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="py-20 text-center">

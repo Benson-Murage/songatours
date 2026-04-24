@@ -28,6 +28,7 @@ import Layout from "@/components/Layout";
 import { formatKES } from "@/lib/formatKES";
 import ShareButtons from "@/components/ShareButtons";
 import SeatIndicator from "@/components/SeatIndicator";
+import TourCountdown from "@/components/TourCountdown";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop";
 const WHATSAPP_ADMIN = "254796102412";
@@ -97,6 +98,8 @@ const TourDetailPage = () => {
   }
 
   const isCanceled = tour.status === "canceled";
+  const isCompleted = tour.status === "completed" ||
+    (tour.is_fixed_date && tour.departure_date && new Date(tour.departure_date) < new Date(new Date().toDateString()));
   const hasDiscount = tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person);
   const effectivePrice = hasDiscount ? Number(tour.discount_price) : Number(tour.price_per_person);
   const subtotal = effectivePrice * guests;
@@ -363,14 +366,19 @@ const TourDetailPage = () => {
             />
           )}
 
-          {soldOut && (
+          {soldOut && !isCompleted && (
             <div className="absolute top-4 left-4 rounded-full bg-destructive px-4 py-1.5 text-sm font-bold text-destructive-foreground shadow-lg">
               SOLD OUT
             </div>
           )}
           {isCanceled && (
             <div className="absolute top-4 left-4 rounded-full bg-destructive px-4 py-1.5 text-sm font-bold text-destructive-foreground shadow-lg">
-              CANCELED
+              CANCELLED
+            </div>
+          )}
+          {isCompleted && !isCanceled && (
+            <div className="absolute top-4 left-4 rounded-full bg-muted px-4 py-1.5 text-sm font-bold text-muted-foreground shadow-lg">
+              COMPLETED
             </div>
           )}
         </div>
@@ -423,8 +431,13 @@ const TourDetailPage = () => {
                 )}
               </div>
 
+              {/* Countdown for upcoming fixed-date tours */}
+              {isFixedDate && !isCanceled && !isCompleted && (
+                <TourCountdown departureDate={tour.departure_date!} className="mt-4" />
+              )}
+
               {/* Seat Indicator */}
-              {capacity && !isCanceled && (
+              {capacity && !isCanceled && !isCompleted && (
                 <div className="mt-4">
                   <SeatIndicator booked={capacity.booked || 0} total={capacity.total} />
                 </div>
@@ -633,7 +646,12 @@ const TourDetailPage = () => {
             <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-4">
               {isCanceled && (
                 <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive font-medium flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" /> This tour has been canceled
+                  <AlertTriangle className="h-4 w-4" /> This tour has been cancelled
+                </div>
+              )}
+              {isCompleted && !isCanceled && (
+                <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" /> This tour has already taken place
                 </div>
               )}
 
@@ -649,7 +667,7 @@ const TourDetailPage = () => {
                 <span className="text-sm text-muted-foreground">/ person</span>
               </div>
 
-              {!isCanceled && !soldOut && (
+              {!isCanceled && !isCompleted && !soldOut && (
                 <div className="space-y-3">
                   <DateSelector />
                   <div className="space-y-1.5">
@@ -718,7 +736,7 @@ const TourDetailPage = () => {
                 </div>
               )}
 
-              {!isCanceled && !soldOut && (
+              {!isCanceled && !isCompleted && !soldOut && (
                 <>
                   <div className="space-y-2 border-t border-border pt-3 text-sm">
                     <div className="flex justify-between">
@@ -752,7 +770,7 @@ const TourDetailPage = () => {
                 </>
               )}
 
-              {soldOut && !isCanceled && (
+              {soldOut && !isCanceled && !isCompleted && (
                 <div className="rounded-lg bg-destructive/10 p-4 text-center">
                   <AlertTriangle className="h-6 w-6 text-destructive mx-auto mb-2" />
                   <p className="font-semibold text-destructive">Sold Out</p>
@@ -765,7 +783,7 @@ const TourDetailPage = () => {
       </div>
 
       {/* Mobile bottom bar */}
-      {!isCanceled && !soldOut && (
+      {!isCanceled && !isCompleted && !soldOut && (
         <div
           className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card px-4 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:hidden"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
@@ -812,7 +830,7 @@ const TourDetailPage = () => {
         </div>
       )}
 
-      {soldOut && !isCanceled && (
+      {soldOut && !isCanceled && !isCompleted && (
         <div
           className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-destructive/10 px-4 pt-4 lg:hidden text-center"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
