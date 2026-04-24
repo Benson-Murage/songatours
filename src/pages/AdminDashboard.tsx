@@ -919,9 +919,13 @@ const AdminDashboard = () => {
       {/* Delete Tour Dialog */}
       <AlertDialog open={!!tourToDelete} onOpenChange={(open) => !open && setTourToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this tour?</AlertDialogTitle>
+           <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete this tour?
+            </AlertDialogTitle>
             <AlertDialogDescription>
+              <span className="block font-medium text-destructive mb-1">⚠️ This action affects critical data and cannot be undone.</span>
               {(activeBookingCountByTour[tourToDelete?.id] || 0) > 0
                 ? `This tour has ${activeBookingCountByTour[tourToDelete?.id]} active booking(s). You must cancel or complete them before deleting.`
                 : `This will permanently remove "${tourToDelete?.title}" and all its images.`}
@@ -944,9 +948,13 @@ const AdminDashboard = () => {
       {/* Cancel Tour Dialog */}
       <AlertDialog open={!!tourToCancel} onOpenChange={(open) => !open && setTourToCancel(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel this tour?</AlertDialogTitle>
+           <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cancel this tour?
+            </AlertDialogTitle>
             <AlertDialogDescription>
+              <span className="block font-medium text-destructive mb-1">⚠️ This action affects critical data.</span>
               Canceling "{tourToCancel?.title}" will prevent new bookings. Existing bookings will remain but should be manually cancelled. This cannot be easily undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -967,9 +975,13 @@ const AdminDashboard = () => {
       {/* Cancel Booking Dialog */}
       <AlertDialog open={!!bookingToCancel} onOpenChange={(open) => !open && setBookingToCancel(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel this booking?</AlertDialogTitle>
+           <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cancel this booking?
+            </AlertDialogTitle>
             <AlertDialogDescription>
+              <span className="block font-medium text-destructive mb-1">⚠️ This action affects critical financial data.</span>
               Cancel booking by {bookingToCancel?.bookedByProfile?.full_name || "Unknown"} for {bookingToCancel?.tours?.title || "Unknown Tour"}. A cancellation email will be sent.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2130,44 +2142,76 @@ const PaymentHistoryTab = () => {
       <p className="text-sm text-muted-foreground flex items-center gap-2">
         <History className="h-4 w-4" /> All payment changes are recorded here for auditing.
       </p>
-      {isLoading ? <Skeleton className="h-40 rounded-xl" /> : (
-        <div className="rounded-xl border border-border bg-card overflow-x-auto">
-          <table className="w-full min-w-[800px] text-sm">
-            <thead className="bg-muted/50">
-              <tr className="text-left">
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Booking</th>
-                <th className="px-4 py-3 font-medium">Admin</th>
-                <th className="px-4 py-3 font-medium">Old Amount</th>
-                <th className="px-4 py-3 font-medium">New Amount</th>
-                <th className="px-4 py-3 font-medium">Status Change</th>
-                <th className="px-4 py-3 font-medium">Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(logs || []).map((log: any) => (
-                <tr key={log.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(log.changed_at).toLocaleString()}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{log.booking_ref}</td>
-                  <td className="px-4 py-3 text-xs">{log.admin_name}</td>
-                  <td className="px-4 py-3 text-xs">{formatKES(log.old_amount_paid || 0)}</td>
-                  <td className="px-4 py-3 text-xs font-medium">{formatKES(log.new_amount_paid || 0)}</td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className="text-muted-foreground">{log.old_payment_status}</span>
-                    {" → "}
-                    <span className={`font-medium ${log.new_payment_status === "paid" ? "text-primary" : log.new_payment_status === "partial" ? "text-accent" : ""}`}>
-                      {log.new_payment_status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{log.change_reason || "—"}</td>
+       {isLoading ? <Skeleton className="h-40 rounded-xl" /> : (
+        <>
+          {/* Mobile cards */}
+          <div className="space-y-2 md:hidden">
+            {(logs || []).map((log: any) => (
+              <div key={log.id} className="rounded-xl border border-border bg-card p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-medium">{log.booking_ref}</span>
+                  <span className="text-[11px] text-muted-foreground">{new Date(log.changed_at).toLocaleString()}</span>
+                </div>
+                <div className="text-xs flex items-center gap-2">
+                  <span className="text-muted-foreground">{formatKES(log.old_amount_paid || 0)}</span>
+                  <span>→</span>
+                  <span className="font-semibold">{formatKES(log.new_amount_paid || 0)}</span>
+                </div>
+                <div className="text-xs">
+                  <span className="text-muted-foreground">{log.old_payment_status}</span>
+                  {" → "}
+                  <span className={`font-medium ${log.new_payment_status === "paid" ? "text-primary" : log.new_payment_status === "partial" ? "text-accent" : ""}`}>
+                    {log.new_payment_status}
+                  </span>
+                </div>
+                <div className="text-[11px] text-muted-foreground">By {log.admin_name}</div>
+                {log.change_reason && <div className="text-[11px] italic text-muted-foreground">"{log.change_reason}"</div>}
+              </div>
+            ))}
+            {(!logs || logs.length === 0) && (
+              <p className="text-center text-muted-foreground text-sm py-8">No payment changes recorded yet</p>
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block rounded-xl border border-border bg-card overflow-x-auto">
+            <table className="w-full min-w-[800px] text-sm">
+              <thead className="bg-muted/50">
+                <tr className="text-left">
+                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium">Booking</th>
+                  <th className="px-4 py-3 font-medium">Admin</th>
+                  <th className="px-4 py-3 font-medium">Old Amount</th>
+                  <th className="px-4 py-3 font-medium">New Amount</th>
+                  <th className="px-4 py-3 font-medium">Status Change</th>
+                  <th className="px-4 py-3 font-medium">Reason</th>
                 </tr>
-              ))}
-              {(!logs || logs.length === 0) && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No payment changes recorded yet</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {(logs || []).map((log: any) => (
+                  <tr key={log.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(log.changed_at).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{log.booking_ref}</td>
+                    <td className="px-4 py-3 text-xs">{log.admin_name}</td>
+                    <td className="px-4 py-3 text-xs">{formatKES(log.old_amount_paid || 0)}</td>
+                    <td className="px-4 py-3 text-xs font-medium">{formatKES(log.new_amount_paid || 0)}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <span className="text-muted-foreground">{log.old_payment_status}</span>
+                      {" → "}
+                      <span className={`font-medium ${log.new_payment_status === "paid" ? "text-primary" : log.new_payment_status === "partial" ? "text-accent" : ""}`}>
+                        {log.new_payment_status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{log.change_reason || "—"}</td>
+                  </tr>
+                ))}
+                {(!logs || logs.length === 0) && (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No payment changes recorded yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </>
   );
