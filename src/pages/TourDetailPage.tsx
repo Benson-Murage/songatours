@@ -28,6 +28,7 @@ import Layout from "@/components/Layout";
 import { formatKES } from "@/lib/formatKES";
 import ShareButtons from "@/components/ShareButtons";
 import SeatIndicator from "@/components/SeatIndicator";
+import TourCountdown from "@/components/TourCountdown";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop";
 const WHATSAPP_ADMIN = "254796102412";
@@ -97,6 +98,8 @@ const TourDetailPage = () => {
   }
 
   const isCanceled = tour.status === "canceled";
+  const isCompleted = tour.status === "completed" ||
+    (tour.is_fixed_date && tour.departure_date && new Date(tour.departure_date) < new Date(new Date().toDateString()));
   const hasDiscount = tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person);
   const effectivePrice = hasDiscount ? Number(tour.discount_price) : Number(tour.price_per_person);
   const subtotal = effectivePrice * guests;
@@ -363,14 +366,19 @@ const TourDetailPage = () => {
             />
           )}
 
-          {soldOut && (
+          {soldOut && !isCompleted && (
             <div className="absolute top-4 left-4 rounded-full bg-destructive px-4 py-1.5 text-sm font-bold text-destructive-foreground shadow-lg">
               SOLD OUT
             </div>
           )}
           {isCanceled && (
             <div className="absolute top-4 left-4 rounded-full bg-destructive px-4 py-1.5 text-sm font-bold text-destructive-foreground shadow-lg">
-              CANCELED
+              CANCELLED
+            </div>
+          )}
+          {isCompleted && !isCanceled && (
+            <div className="absolute top-4 left-4 rounded-full bg-muted px-4 py-1.5 text-sm font-bold text-muted-foreground shadow-lg">
+              COMPLETED
             </div>
           )}
         </div>
@@ -423,8 +431,13 @@ const TourDetailPage = () => {
                 )}
               </div>
 
+              {/* Countdown for upcoming fixed-date tours */}
+              {isFixedDate && !isCanceled && !isCompleted && (
+                <TourCountdown departureDate={tour.departure_date!} className="mt-4" />
+              )}
+
               {/* Seat Indicator */}
-              {capacity && !isCanceled && (
+              {capacity && !isCanceled && !isCompleted && (
                 <div className="mt-4">
                   <SeatIndicator booked={capacity.booked || 0} total={capacity.total} />
                 </div>
