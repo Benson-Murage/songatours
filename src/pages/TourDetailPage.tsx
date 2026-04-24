@@ -646,7 +646,12 @@ const TourDetailPage = () => {
             <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-4">
               {isCanceled && (
                 <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive font-medium flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" /> This tour has been canceled
+                  <AlertTriangle className="h-4 w-4" /> This tour has been cancelled
+                </div>
+              )}
+              {isCompleted && !isCanceled && (
+                <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" /> This tour has already taken place
                 </div>
               )}
 
