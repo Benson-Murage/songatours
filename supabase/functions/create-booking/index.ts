@@ -77,6 +77,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Tour not found" }, 404);
     }
 
+    if (tour.status === "canceled") {
+      return jsonResponse({ error: "This tour has been cancelled and is no longer accepting bookings" }, 400);
+    }
+    if (tour.status === "completed") {
+      return jsonResponse({ error: "This tour has already taken place" }, 400);
+    }
     if (tour.status !== "published") {
       return jsonResponse({ error: "This tour is not available for booking" }, 400);
     }
