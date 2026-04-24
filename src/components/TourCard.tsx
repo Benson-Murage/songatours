@@ -73,6 +73,10 @@ const TourCard = ({ tour }: TourCardProps) => {
             <span className="absolute left-3 top-3 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
               Completed
             </span>
+          ) : isSoldOut ? (
+            <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
+              Sold Out
+            </span>
           ) : hasDiscount ? (
             <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
               Deal
