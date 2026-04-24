@@ -23,6 +23,11 @@ const TourCard = ({ tour }: TourCardProps) => {
   const isCompleted = tour.status === "completed" ||
     (tour.is_fixed_date && tour.departure_date && new Date(tour.departure_date) < new Date(new Date().toDateString()));
   const isCanceled = tour.status === "canceled";
+  const isActive = !isCompleted && !isCanceled;
+  // Only check capacity for active fixed-date tours (flexible-date tours don't have a single capacity to "sell out")
+  const capacityDate = tour.is_fixed_date ? tour.departure_date ?? undefined : undefined;
+  const { data: capacity } = useTourCapacity(isActive && tour.is_fixed_date ? tour.id : "", capacityDate);
+  const isSoldOut = isActive && tour.is_fixed_date && capacity?.soldOut === true;
 
   const displayImage = tour.tour_images?.sort((a, b) => a.display_order - b.display_order)?.[0]?.image_url
     || tour.image_url
