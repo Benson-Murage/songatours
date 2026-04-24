@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Heart, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
-import { useFavorites, useToggleFavorite } from "@/hooks/useTours";
+import { useFavorites, useToggleFavorite, useTourCapacity } from "@/hooks/useTours";
 import type { Tour } from "@/hooks/useTours";
 import { toast } from "sonner";
 import { formatKES } from "@/lib/formatKES";
@@ -23,6 +23,11 @@ const TourCard = ({ tour }: TourCardProps) => {
   const isCompleted = tour.status === "completed" ||
     (tour.is_fixed_date && tour.departure_date && new Date(tour.departure_date) < new Date(new Date().toDateString()));
   const isCanceled = tour.status === "canceled";
+  const isActive = !isCompleted && !isCanceled;
+  // Only check capacity for active fixed-date tours (flexible-date tours don't have a single capacity to "sell out")
+  const capacityDate = tour.is_fixed_date ? tour.departure_date ?? undefined : undefined;
+  const { data: capacity } = useTourCapacity(isActive && tour.is_fixed_date ? tour.id : "", capacityDate);
+  const isSoldOut = isActive && tour.is_fixed_date && capacity?.soldOut === true;
 
   const displayImage = tour.tour_images?.sort((a, b) => a.display_order - b.display_order)?.[0]?.image_url
     || tour.image_url
@@ -68,6 +73,10 @@ const TourCard = ({ tour }: TourCardProps) => {
             <span className="absolute left-3 top-3 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
               Completed
             </span>
+          ) : isSoldOut ? (
+            <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
+              Sold Out
+            </span>
           ) : hasDiscount ? (
             <span className="absolute left-3 top-3 rounded-full bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
               Deal
@@ -95,11 +104,16 @@ const TourCard = ({ tour }: TourCardProps) => {
             {tour.description}
           </p>
 
-          {/* Fixed date badge */}
-          {tour.is_fixed_date && tour.departure_date && (
+          {/* Fixed date badge — hidden when sold out (booking actions are disabled) */}
+          {tour.is_fixed_date && tour.departure_date && !isSoldOut && (
             <div className="mt-2 flex items-center gap-1 text-xs text-primary font-medium">
               <CalendarDays className="h-3 w-3" />
               Departs {format(new Date(tour.departure_date), "MMM d, yyyy")}
+            </div>
+          )}
+          {isSoldOut && (
+            <div className="mt-2 text-xs font-semibold text-destructive">
+              No seats available for this departure
             </div>
           )}
 
