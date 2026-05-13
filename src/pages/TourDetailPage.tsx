@@ -558,6 +558,7 @@ const TourDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-4 space-y-6">
+                <h2 className="sr-only">Reviews</h2>
                 {totalReviews > 0 ? (
                   <div className="flex flex-col sm:flex-row gap-6 rounded-2xl bg-secondary p-5">
                     <div className="text-center">
