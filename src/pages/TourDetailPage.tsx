@@ -29,6 +29,7 @@ import { formatKES } from "@/lib/formatKES";
 import ShareButtons from "@/components/ShareButtons";
 import SeatIndicator from "@/components/SeatIndicator";
 import TourCountdown from "@/components/TourCountdown";
+import useSEO from "@/hooks/useSEO";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop";
 const WHATSAPP_ADMIN = "254796102412";
