@@ -7,6 +7,7 @@ import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import useSEO from "@/hooks/useSEO";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
