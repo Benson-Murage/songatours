@@ -545,6 +545,7 @@ const TourDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="highlights" className="mt-4">
+                <h2 className="sr-only">Highlights</h2>
                 {tour.highlights?.length ? (
                   <ul className="space-y-2">
                     {tour.highlights.map((item, i) => (
