@@ -496,6 +496,7 @@ const TourDetailPage = () => {
 
               {itinerary.length > 0 && (
                 <TabsContent value="itinerary" className="mt-4">
+                  <h2 className="sr-only">Itinerary</h2>
                   <div className="space-y-4">
                     {itinerary.map((item, i) => (
                       <div key={i} className="flex gap-4">
