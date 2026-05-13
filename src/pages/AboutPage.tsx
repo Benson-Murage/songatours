@@ -24,7 +24,7 @@ const AboutPage = () => (
             <div className="mx-auto mb-4 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <v.icon className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="font-semibold mb-2">{v.title}</h3>
+            <h2 className="font-semibold mb-2 text-base">{v.title}</h2>
             <p className="text-sm text-muted-foreground">{v.desc}</p>
           </article>
         ))}

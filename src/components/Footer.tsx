@@ -70,16 +70,19 @@ const Footer = () => {
             >
               salmajeods11@gmail.com
             </a>
-            <form onSubmit={handleNewsletter} className="mt-4 flex gap-2">
+            <form onSubmit={handleNewsletter} className="mt-4 flex gap-2" aria-label="Newsletter signup">
+              <label htmlFor="newsletter-email" className="sr-only">Newsletter email</label>
               <Input
+                id="newsletter-email"
                 type="email"
                 placeholder="Newsletter email"
+                aria-label="Newsletter email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="text-sm"
                 required
               />
-              <Button type="submit" variant="accent" size="sm" className="shrink-0">
+              <Button type="submit" variant="accent" size="sm" className="shrink-0" aria-label="Subscribe to newsletter">
                 <Mail className="h-4 w-4" />
               </Button>
             </form>

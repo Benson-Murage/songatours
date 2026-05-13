@@ -474,6 +474,7 @@ const TourDetailPage = () => {
               </TabsList>
 
               <TabsContent value="overview" className="mt-4">
+                <h2 className="sr-only">Overview</h2>
                 <p className="leading-relaxed text-muted-foreground">
                   {tour.description || "Experience the beauty of Africa like never before."}
                 </p>
@@ -495,6 +496,7 @@ const TourDetailPage = () => {
 
               {itinerary.length > 0 && (
                 <TabsContent value="itinerary" className="mt-4">
+                  <h2 className="sr-only">Itinerary</h2>
                   <div className="space-y-4">
                     {itinerary.map((item, i) => (
                       <div key={i} className="flex gap-4">
@@ -517,6 +519,7 @@ const TourDetailPage = () => {
               )}
 
               <TabsContent value="included" className="mt-4">
+                <h2 className="sr-only">What's Included</h2>
                 {tour.included?.length ? (
                   <ul className="space-y-2">
                     {tour.included.map((item, i) => (
@@ -529,6 +532,7 @@ const TourDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="excluded" className="mt-4">
+                <h2 className="sr-only">What's Excluded</h2>
                 {tour.excluded?.length ? (
                   <ul className="space-y-2">
                     {tour.excluded.map((item, i) => (
@@ -541,6 +545,7 @@ const TourDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="highlights" className="mt-4">
+                <h2 className="sr-only">Highlights</h2>
                 {tour.highlights?.length ? (
                   <ul className="space-y-2">
                     {tour.highlights.map((item, i) => (
@@ -553,6 +558,7 @@ const TourDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-4 space-y-6">
+                <h2 className="sr-only">Reviews</h2>
                 {totalReviews > 0 ? (
                   <div className="flex flex-col sm:flex-row gap-6 rounded-2xl bg-secondary p-5">
                     <div className="text-center">
@@ -610,17 +616,28 @@ const TourDetailPage = () => {
                   <form onSubmit={handleReview} className="space-y-3 rounded-2xl bg-muted p-4">
                     <h4 className="font-medium text-sm">Leave a Review</h4>
                     <p className="text-xs text-muted-foreground">You must have a booking for this tour to submit a review.</p>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" role="radiogroup" aria-label="Your rating">
                       {[1, 2, 3, 4, 5].map((s) => (
-                        <button type="button" key={s} onClick={() => setReviewRating(s)} className="transition-transform hover:scale-110">
+                        <button
+                          type="button"
+                          key={s}
+                          onClick={() => setReviewRating(s)}
+                          className="transition-transform hover:scale-110"
+                          role="radio"
+                          aria-checked={reviewRating === s}
+                          aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
+                        >
                           <Star className={`h-5 w-5 ${s <= reviewRating ? "fill-accent text-accent" : "text-muted-foreground"}`} />
                         </button>
                       ))}
                     </div>
+                    <label htmlFor="review-comment" className="sr-only">Your review</label>
                     <textarea
+                      id="review-comment"
                       value={reviewText}
                       onChange={(e) => setReviewText(e.target.value)}
                       placeholder="Share your experience..."
+                      aria-label="Your review"
                       className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
                       rows={3}
                       maxLength={500}
