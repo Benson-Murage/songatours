@@ -616,17 +616,28 @@ const TourDetailPage = () => {
                   <form onSubmit={handleReview} className="space-y-3 rounded-2xl bg-muted p-4">
                     <h4 className="font-medium text-sm">Leave a Review</h4>
                     <p className="text-xs text-muted-foreground">You must have a booking for this tour to submit a review.</p>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" role="radiogroup" aria-label="Your rating">
                       {[1, 2, 3, 4, 5].map((s) => (
-                        <button type="button" key={s} onClick={() => setReviewRating(s)} className="transition-transform hover:scale-110">
+                        <button
+                          type="button"
+                          key={s}
+                          onClick={() => setReviewRating(s)}
+                          className="transition-transform hover:scale-110"
+                          role="radio"
+                          aria-checked={reviewRating === s}
+                          aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
+                        >
                           <Star className={`h-5 w-5 ${s <= reviewRating ? "fill-accent text-accent" : "text-muted-foreground"}`} />
                         </button>
                       ))}
                     </div>
+                    <label htmlFor="review-comment" className="sr-only">Your review</label>
                     <textarea
+                      id="review-comment"
                       value={reviewText}
                       onChange={(e) => setReviewText(e.target.value)}
                       placeholder="Share your experience..."
+                      aria-label="Your review"
                       className="w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
                       rows={3}
                       maxLength={500}
