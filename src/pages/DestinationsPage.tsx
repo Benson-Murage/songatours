@@ -118,7 +118,7 @@ const DestinationsPage = () => {
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-3xl font-bold">Explore Tours</h1>
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground" aria-label="Clear all filters">
               <X className="h-4 w-4 mr-1" /> Clear filters
             </Button>
           )}
@@ -129,9 +129,12 @@ const DestinationsPage = () => {
         <div className="flex flex-col gap-3 mb-6">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <label htmlFor="tour-search" className="sr-only">Search tours</label>
             <Input
+              id="tour-search"
               className="pl-9"
               placeholder="Search tours..."
+              aria-label="Search tours"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
