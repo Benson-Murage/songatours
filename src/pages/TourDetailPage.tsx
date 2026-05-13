@@ -474,6 +474,7 @@ const TourDetailPage = () => {
               </TabsList>
 
               <TabsContent value="overview" className="mt-4">
+                <h2 className="sr-only">Overview</h2>
                 <p className="leading-relaxed text-muted-foreground">
                   {tour.description || "Experience the beauty of Africa like never before."}
                 </p>
