@@ -7,6 +7,7 @@ import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import useSEO from "@/hooks/useSEO";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -21,6 +22,11 @@ const contactInfo = [
 ];
 
 const ContactPage = () => {
+  useSEO({
+    title: "Contact Songa Travel & Tours — Get In Touch",
+    description: "Questions about our African safaris, road trips or bookings? Reach Songa Travel & Tours by email, phone or WhatsApp — we reply fast.",
+    canonical: "https://songatours.lovable.app/contact",
+  });
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [loading, setLoading] = useState(false);
 

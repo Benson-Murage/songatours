@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import { MapPin, Heart, Shield, Users } from "lucide-react";
+import useSEO from "@/hooks/useSEO";
 
 const values = [
   { icon: Heart, title: "Authentic Experiences", desc: "We partner with local communities to bring you genuine cultural encounters." },
@@ -8,7 +9,13 @@ const values = [
   { icon: MapPin, title: "Hidden Gems", desc: "We go beyond tourist traps to show you Africa's true beauty." },
 ];
 
-const AboutPage = () => (
+const AboutPage = () => {
+  useSEO({
+    title: "About Songa Travel & Tours — Our Story & Mission",
+    description: "Founded in Nairobi, Songa curates authentic African safaris, road trips and cultural tours that support local communities and conservation.",
+    canonical: "https://songatours.lovable.app/about",
+  });
+  return (
   <Layout>
     <section className="container mx-auto px-4 py-16">
       <div className="max-w-3xl mx-auto text-center mb-12">
@@ -46,6 +53,7 @@ const AboutPage = () => (
       </div>
     </section>
   </Layout>
-);
+  );
+};
 
 export default AboutPage;

@@ -18,6 +18,7 @@ const Index = () => {
     title: "Songa Travel & Tours — Premium African Tourism",
     description: "Discover Africa's hidden wonders with curated safari tours, road trips, and cultural experiences across Kenya and East Africa. Book your adventure today.",
     ogImage: heroImage,
+    canonical: "https://songatours.lovable.app/",
   });
 
   const { data: tours, isLoading } = useTours();

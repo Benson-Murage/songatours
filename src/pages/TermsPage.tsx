@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import useSEO from "@/hooks/useSEO";
 
 const TermsPage = () => {
-  useSEO({ title: "Terms & Conditions", description: "Songa Travel & Tours terms and conditions for booking tours and using our platform." });
+  useSEO({ title: "Terms & Conditions — Songa Travel & Tours", description: "Read the terms and conditions for booking African tours and using the Songa Travel & Tours platform, including payment, cancellation and liability rules.", canonical: "https://songatours.lovable.app/terms" });
 
   return (
     <Layout>

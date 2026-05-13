@@ -5,8 +5,14 @@ import TourCardSkeleton from "@/components/TourCardSkeleton";
 import { useTours } from "@/hooks/useTours";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import useSEO from "@/hooks/useSEO";
 
 const RoadTripsPage = () => {
+  useSEO({
+    title: "African Road Trips — Scenic Routes & Self-Drive Tours",
+    description: "Hit the open road with curated African road trips. Scenic drives, hidden stops and unforgettable adventures across Kenya and East Africa.",
+    canonical: "https://songatours.lovable.app/road-trips",
+  });
   const { data: tours, isLoading, isError } = useTours(undefined, "roadtrip");
 
   return (

@@ -29,6 +29,7 @@ import { formatKES } from "@/lib/formatKES";
 import ShareButtons from "@/components/ShareButtons";
 import SeatIndicator from "@/components/SeatIndicator";
 import TourCountdown from "@/components/TourCountdown";
+import useSEO from "@/hooks/useSEO";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=800&fit=crop";
 const WHATSAPP_ADMIN = "254796102412";
@@ -58,6 +59,17 @@ const TourDetailPage = () => {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [whatsappModal, setWhatsappModal] = useState<string | null>(null);
   const [bookingRef, setBookingRef] = useState<string | null>(null);
+
+  const tourImageForSEO = tour?.tour_images?.sort((a: any, b: any) => a.display_order - b.display_order)?.[0]?.image_url || tour?.image_url;
+  useSEO({
+    title: tour ? `${tour.title} — ${tour.duration_days}-Day Tour | Songa` : "Tour Details — Songa Travel & Tours",
+    description: tour
+      ? (tour.description?.slice(0, 155) || `Book the ${tour.title} ${tour.duration_days}-day African tour with Songa Travel & Tours.`)
+      : "Discover detailed itineraries, pricing and availability for our curated African tours.",
+    canonical: `https://songatours.lovable.app/tours/${id}`,
+    ogImage: tourImageForSEO,
+    ogType: "product",
+  });
   const [bookingSummary, setBookingSummary] = useState<any>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const handleParticipantsChange = useCallback((p: Participant[]) => setParticipants(p), []);
