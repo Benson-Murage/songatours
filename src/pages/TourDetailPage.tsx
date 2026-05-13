@@ -519,6 +519,7 @@ const TourDetailPage = () => {
               )}
 
               <TabsContent value="included" className="mt-4">
+                <h2 className="sr-only">What's Included</h2>
                 {tour.included?.length ? (
                   <ul className="space-y-2">
                     {tour.included.map((item, i) => (
