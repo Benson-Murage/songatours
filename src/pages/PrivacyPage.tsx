@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import useSEO from "@/hooks/useSEO";
 
 const PrivacyPage = () => {
-  useSEO({ title: "Privacy Policy", description: "Songa Travel & Tours privacy policy — how we collect, use, and protect your personal data." });
+  useSEO({ title: "Privacy Policy — Songa Travel & Tours", description: "Songa Travel & Tours privacy policy — how we collect, use, and protect your personal data when you book African tours with us.", canonical: "https://songatours.lovable.app/privacy" });
 
   return (
     <Layout>
