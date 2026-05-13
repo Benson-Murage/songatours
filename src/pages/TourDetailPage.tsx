@@ -532,6 +532,7 @@ const TourDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="excluded" className="mt-4">
+                <h2 className="sr-only">What's Excluded</h2>
                 {tour.excluded?.length ? (
                   <ul className="space-y-2">
                     {tour.excluded.map((item, i) => (
