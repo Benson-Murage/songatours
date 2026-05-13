@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import useSEO from "@/hooks/useSEO";
 
 const RefundPage = () => {
-  useSEO({ title: "Refund Policy", description: "Songa Travel & Tours refund and cancellation policy for tour bookings." });
+  useSEO({ title: "Refund & Cancellation Policy — Songa Travel & Tours", description: "Our refund and cancellation policy for African tour bookings, including timing windows, eligibility and how to request a refund from Songa.", canonical: "https://songatours.lovable.app/refund-policy" });
 
   return (
     <Layout>
