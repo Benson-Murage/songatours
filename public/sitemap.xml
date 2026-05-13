@@ -40,4 +40,46 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
+  <url>
+    <loc>https://songatours.lovable.app/tours/5df21533-5598-45e5-a331-2f1175a88075</loc>
+    <lastmod>2026-04-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://songatours.lovable.app/tours/21ce181d-dc8c-43b5-a120-458475f342bc</loc>
+    <lastmod>2026-04-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://songatours.lovable.app/tours/fc4f106d-48d7-4438-892d-d76e11e34013</loc>
+    <lastmod>2026-03-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://songatours.lovable.app/tours/ac205ff0-d3d0-4012-869a-8b80e89c9e96</loc>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://songatours.lovable.app/tours/68747220-a449-4283-a001-f31eed2a2cc3</loc>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://songatours.lovable.app/tours/6fe7a29a-cf47-412d-9421-b0a898075fd5</loc>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://songatours.lovable.app/tours/5d7a6420-09a3-4927-a4d2-a1a348c298c5</loc>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>
