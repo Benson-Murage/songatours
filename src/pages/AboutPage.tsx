@@ -53,6 +53,7 @@ const AboutPage = () => {
       </div>
     </section>
   </Layout>
-);
+  );
+};
 
 export default AboutPage;
