@@ -44,8 +44,9 @@ const PRICE_RANGES = [
 
 const DestinationsPage = () => {
   useSEO({
-    title: "Explore Tours",
+    title: "Explore African Tours & Destinations — Songa",
     description: "Browse curated African tours — safaris, road trips, hiking, beach getaways, and cultural experiences. Filter by destination, price, and difficulty.",
+    canonical: "https://songatours.lovable.app/destinations",
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const activeSlug = searchParams.get("destination") || "";
