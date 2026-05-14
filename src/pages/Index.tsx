@@ -47,7 +47,7 @@ const Index = () => {
           <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl drop-shadow-lg animate-fade-in" style={{ animationDelay: "0.1s" }}>
             Discover Africa's <span className="text-accent">Hidden Wonders</span>
           </h1>
-          <p className="mx-auto mb-8 max-w-xl text-lg text-white/80 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+          <p className="mx-auto mb-8 max-w-xl text-lg text-white animate-fade-in" style={{ animationDelay: "0.2s" }}>
             Curated tours through breathtaking landscapes, vibrant cultures, and unforgettable wildlife encounters.
           </p>
           <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
