@@ -149,7 +149,7 @@ export const useReviews = (tourId: string) =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reviews")
-        .select("*, profiles(full_name, avatar_url)")
+        .select("*, public_profiles(full_name, avatar_url)")
         .eq("tour_id", tourId)
         .order("created_at", { ascending: false });
       if (error) throw error;
