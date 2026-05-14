@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, Loader2,
   CheckCircle2, Heart, ShieldCheck, Phone, XCircle, AlertTriangle, MessageCircle,
