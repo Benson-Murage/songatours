@@ -38,7 +38,7 @@ const Index = () => {
     <Layout>
       {/* Hero */}
       <section className="relative flex min-h-[75vh] items-center justify-center overflow-hidden">
-        <img src={heroImage} alt="African savanna at golden hour" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={heroImage} alt="African savanna at golden hour" width={1920} height={1080} fetchPriority="high" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60" />
         <div className="relative z-10 w-full max-w-4xl px-4 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-widest text-accent animate-fade-in">
