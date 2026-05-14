@@ -16,7 +16,7 @@ const DestinationCard = ({ destination }: { destination: Destination }) => (
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
       <div className="absolute bottom-0 left-0 p-5">
         <h3 className="text-lg font-bold text-white">{destination.name}</h3>
-        <p className="text-sm text-white/70">{destination.country}</p>
+        <p className="text-sm text-white">{destination.country}</p>
       </div>
     </article>
   </Link>
