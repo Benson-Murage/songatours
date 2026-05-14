@@ -1,0 +1,28 @@
+# Songa Travel & Tours
+
+> Authentic African safaris, road trips, and hiking adventures. Curated tours across Kenya and East Africa with transparent pricing in KES.
+
+Songa Travel & Tours is a Kenyan tour operator offering guided safaris, scenic road trips, and hiking expeditions. Travelers can browse upcoming departures, book online with deposit-based payments, manage trips from a personal dashboard, and join WhatsApp groups for each departure.
+
+## Pages
+
+- [Home](/): Featured destinations, trending tours, and upcoming departures.
+- [Destinations](/destinations): Browse and filter all available tours by destination, category, price, and date.
+- [Road Trips](/road-trips): Curated self-drive and guided road trip experiences across East Africa.
+- [About](/about): Our story, mission, and what makes Songa different.
+- [Contact](/contact): Get in touch via email, phone, or WhatsApp.
+
+## Account
+
+- [Sign in or sign up](/auth): Create an account or log in to book and manage trips.
+- [Dashboard](/dashboard): View upcoming, completed, and cancelled bookings (requires login).
+
+## Policies
+
+- [Privacy Policy](/privacy): How we handle your personal data.
+- [Terms of Service](/terms): Booking and usage terms.
+- [Refund Policy](/refund): Cancellation and refund rules.
+
+## Optional
+
+- [Sitemap](/sitemap.xml): Full machine-readable list of public pages.
