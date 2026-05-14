@@ -149,14 +149,24 @@ export const useReviews = (tourId: string) =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reviews")
-        .select("*, profiles(full_name, avatar_url)")
+        .select("*")
         .eq("tour_id", tourId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      const userIds = Array.from(new Set((data || []).map((r: any) => r.user_id).filter(Boolean)));
+      let profileMap: Record<string, { full_name: string | null; avatar_url: string | null }> = {};
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from("public_profiles" as any)
+          .select("id, full_name, avatar_url")
+          .in("id", userIds);
+        profileMap = Object.fromEntries((profs || []).map((p: any) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }]));
+      }
+      return (data || []).map((r: any) => ({ ...r, profiles: profileMap[r.user_id] || null }));
     },
     enabled: !!tourId,
   });
+
 
 export const useFavorites = (userId?: string) =>
   useQuery({
