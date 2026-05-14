@@ -47,6 +47,7 @@ const useSEO = ({ title, description, ogImage, ogType = "website", canonical }: 
         document.head.appendChild(link);
       }
       link.setAttribute("href", canonical);
+      setMeta("og:url", canonical, "property");
     }
 
     return () => {
