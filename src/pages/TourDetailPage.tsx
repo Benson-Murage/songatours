@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, Loader2,
   CheckCircle2, Heart, ShieldCheck, Phone, XCircle, AlertTriangle, MessageCircle,
@@ -70,6 +70,45 @@ const TourDetailPage = () => {
     ogImage: tourImageForSEO,
     ogType: "product",
   });
+
+  // Product / TouristTrip JSON-LD for rich search results
+  useEffect(() => {
+    if (!tour) return;
+    const price = tour.discount_price != null && Number(tour.discount_price) < Number(tour.price_per_person)
+      ? Number(tour.discount_price)
+      : Number(tour.price_per_person);
+    const url = `https://songatours.lovable.app/tours/${id}`;
+    const ld: any = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: tour.title,
+      description: tour.description || `${tour.duration_days}-day African tour by Songa Travel & Tours.`,
+      image: tourImageForSEO ? [tourImageForSEO] : undefined,
+      url,
+      brand: { "@type": "Organization", name: "Songa Travel & Tours" },
+      offers: {
+        "@type": "Offer",
+        url,
+        priceCurrency: "KES",
+        price: String(price),
+        availability: tour.status === "published" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      },
+    };
+    if (reviews?.length) {
+      ld.aggregateRating = {
+        "@type": "AggregateRating",
+        ratingValue: (reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1),
+        reviewCount: reviews.length,
+      };
+    }
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.setAttribute("data-tour-jsonld", "true");
+    script.text = JSON.stringify(ld);
+    document.head.appendChild(script);
+    return () => { script.remove(); };
+  }, [tour, id, tourImageForSEO, reviews]);
+
   const [bookingSummary, setBookingSummary] = useState<any>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const handleParticipantsChange = useCallback((p: Participant[]) => setParticipants(p), []);
