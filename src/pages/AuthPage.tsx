@@ -9,11 +9,17 @@ import { Loader2 } from "lucide-react";
 import AppLogo from "@/components/AppLogo";
 import { toast } from "sonner";
 import { z } from "zod";
+import useSEO from "@/hooks/useSEO";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const AuthPage = () => {
+  useSEO({
+    title: "Sign In or Create Account",
+    description: "Sign in to manage your Songa Travel & Tours bookings, or create an account to start planning your African safari, road trip, or hiking adventure.",
+    canonical: "https://songatours.lovable.app/auth",
+  });
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
