@@ -51,7 +51,7 @@ const useSEO = ({ title, description, ogImage, ogType = "website", canonical }: 
     }
 
     return () => {
-      document.title = "Songa Travel & Tours — Premium African Tourism";
+      document.title = "Songa Travel & Tours";
     };
   }, [title, description, ogImage, ogType, canonical]);
 };

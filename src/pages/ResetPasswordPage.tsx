@@ -6,8 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import useSEO from "@/hooks/useSEO";
 
 const ResetPasswordPage = () => {
+  useSEO({
+    title: "Reset Your Password",
+    description: "Set a new password for your Songa Travel & Tours account to securely access your bookings and trip details.",
+    canonical: "https://songatours.lovable.app/reset-password",
+  });
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

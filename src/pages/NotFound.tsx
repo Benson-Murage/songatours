@@ -3,8 +3,15 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import AppLogo from "@/components/AppLogo";
+import useSEO from "@/hooks/useSEO";
 
-const NotFound = () => (
+const NotFound = () => {
+  useSEO({
+    title: "Page Not Found (404)",
+    description: "The page you're looking for doesn't exist. Head back to Songa Travel & Tours to discover safaris, road trips, and hiking adventures across Africa.",
+    canonical: "https://songatours.lovable.app/404",
+  });
+  return (
   <Layout>
     <div className="container mx-auto px-4 py-20 text-center">
       <div className="mx-auto max-w-md">
@@ -29,6 +36,7 @@ const NotFound = () => (
       </div>
     </div>
   </Layout>
-);
+  );
+};
 
 export default NotFound;
