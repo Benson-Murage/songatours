@@ -36,6 +36,7 @@ const NotFound = () => {
       </div>
     </div>
   </Layout>
-);
+  );
+};
 
 export default NotFound;
