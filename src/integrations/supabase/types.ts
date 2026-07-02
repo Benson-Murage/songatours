@@ -29,6 +29,7 @@ export type Database = {
           guests_count: number
           id: string
           overpayment_amount: number
+          overpayment_credit: number
           payment_method: string | null
           payment_reference: string | null
           payment_status: string
@@ -55,6 +56,7 @@ export type Database = {
           guests_count?: number
           id?: string
           overpayment_amount?: number
+          overpayment_credit?: number
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
@@ -81,6 +83,7 @@ export type Database = {
           guests_count?: number
           id?: string
           overpayment_amount?: number
+          overpayment_credit?: number
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
@@ -323,6 +326,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "payment_audit_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_proofs: {
+        Row: {
+          amount_sent: number
+          bank_reference: string | null
+          booking_id: string
+          created_at: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          mpesa_code: string | null
+          notes: string | null
+          payment_date: string
+          payment_method: Database["public"]["Enums"]["payment_method_enum"]
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["payment_proof_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_sent: number
+          bank_reference?: string | null
+          booking_id: string
+          created_at?: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          mpesa_code?: string | null
+          notes?: string | null
+          payment_date: string
+          payment_method: Database["public"]["Enums"]["payment_method_enum"]
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_proof_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_sent?: number
+          bank_reference?: string | null
+          booking_id?: string
+          created_at?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          mpesa_code?: string | null
+          notes?: string | null
+          payment_date?: string
+          payment_method?: Database["public"]["Enums"]["payment_method_enum"]
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_proof_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_proofs_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
@@ -632,6 +706,12 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       booking_status: "pending" | "paid" | "cancelled"
+      payment_method_enum: "mpesa" | "bank_transfer" | "cash" | "card" | "other"
+      payment_proof_status:
+        | "pending_review"
+        | "approved"
+        | "rejected"
+        | "more_info_requested"
       tour_difficulty: "Easy" | "Medium" | "Hard"
       tour_status: "published" | "draft" | "canceled" | "completed"
     }
@@ -763,6 +843,13 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       booking_status: ["pending", "paid", "cancelled"],
+      payment_method_enum: ["mpesa", "bank_transfer", "cash", "card", "other"],
+      payment_proof_status: [
+        "pending_review",
+        "approved",
+        "rejected",
+        "more_info_requested",
+      ],
       tour_difficulty: ["Easy", "Medium", "Hard"],
       tour_status: ["published", "draft", "canceled", "completed"],
     },

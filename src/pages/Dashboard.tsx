@@ -14,6 +14,7 @@ import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import { formatKES } from "@/lib/formatKES";
 import InvoiceDownload from "@/components/InvoiceDownload";
+import PaymentProofsPanel from "@/components/PaymentProofsPanel";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pending: { label: "Pending", className: "bg-accent/10 text-accent" },
@@ -163,6 +164,18 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+        {b.status !== "cancelled" && (
+          <div className="w-full sm:basis-full">
+            <PaymentProofsPanel
+              bookingId={b.id}
+              totalPrice={Number(b.total_price || 0)}
+              amountPaid={Number(b.amount_paid ?? b.deposit_amount ?? 0)}
+              balanceDue={Number(b.balance_due ?? Math.max(0, Number(b.total_price || 0) - Number(b.amount_paid ?? 0)))}
+              overpaymentCredit={Number((b as any).overpayment_credit ?? (b as any).overpayment_amount ?? 0)}
+              paymentStatus={b.payment_status || "pending"}
+            />
+          </div>
+        )}
       </article>
     );
   };

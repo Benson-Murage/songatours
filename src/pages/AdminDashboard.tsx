@@ -16,6 +16,7 @@ import InvoiceDownload from "@/components/InvoiceDownload";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import Layout from "@/components/Layout";
 import TourManifest from "@/components/admin/TourManifest";
+import PaymentVerificationTab from "@/components/admin/PaymentVerificationTab";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -465,6 +466,7 @@ const AdminDashboard = () => {
               <TabsTrigger value="tours" className="whitespace-nowrap">Tours</TabsTrigger>
               <TabsTrigger value="bookings" className="whitespace-nowrap">Bookings</TabsTrigger>
               <TabsTrigger value="customers" className="whitespace-nowrap">Customers</TabsTrigger>
+              <TabsTrigger value="payment-verification" className="whitespace-nowrap">Verify Proofs</TabsTrigger>
               <TabsTrigger value="payment-history" className="whitespace-nowrap">Payments</TabsTrigger>
               <TabsTrigger value="discounts" className="whitespace-nowrap">Promos</TabsTrigger>
               <TabsTrigger value="referrals" className="whitespace-nowrap">Referrals</TabsTrigger>
@@ -906,6 +908,13 @@ const AdminDashboard = () => {
           {/* ── ANALYTICS TAB ── */}
           <TabsContent value="analytics" className="space-y-4">
             <AnalyticsTab bookings={adminBookings || []} tours={adminTours || []} />
+          </TabsContent>
+
+          {/* ── PAYMENT VERIFICATION TAB ── */}
+          <TabsContent value="payment-verification" className="space-y-4">
+            <ErrorBoundary fallbackTitle="Payment verification failed to load">
+              <PaymentVerificationTab />
+            </ErrorBoundary>
           </TabsContent>
 
           {/* ── PAYMENT HISTORY TAB ── */}
