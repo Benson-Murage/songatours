@@ -133,7 +133,47 @@ Deno.serve(async (req) => {
     let subject = "";
     let html = "";
 
-    if (type === "payment_update") {
+    // Simple branded wrapper used by proof-related emails
+    const wrap = (headerBg: string, headerColor: string, title: string, body: string) => `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background:#ffffff;">
+        <div style="text-align:center; margin-bottom:24px;"><img src="${LOGO_URL}" alt="Songa Travel & Tours" style="height:50px;" /></div>
+        <div style="background:${headerBg}; border-radius:12px; padding:24px; margin-bottom:16px;">
+          <h2 style="color:${headerColor}; font-size:20px; margin:0 0 6px;">${title}</h2>
+          <p style="color:${headerColor}; font-size:14px; margin:0;">Hi ${to_name || "Traveler"}, this is an update on your booking for <strong>${tour_title}</strong>.</p>
+        </div>
+        ${body}
+        <p style="color:#6B7280; font-size:13px; text-align:center;">Booking Reference: <strong>${displayRef}</strong></p>
+        <p style="color:#9CA3AF; font-size:12px; text-align:center; margin-top:16px;">Questions? Contact ${SUPPORT_EMAIL} or WhatsApp ${WHATSAPP}</p>
+      </div>`;
+
+    const summaryTable = () => `
+      <div style="background:#f9fafb; border-radius:12px; padding:20px; margin-bottom:16px;">
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          <tr><td style="padding:6px 0; color:#6B7280;">Tour total</td><td style="text-align:right; color:#111827;">${formatKES(Number(total_price || 0))}</td></tr>
+          <tr><td style="padding:6px 0; color:#6B7280;">Total paid</td><td style="text-align:right; color:#0F766E; font-weight:700;">${formatKES(Number(total_paid ?? 0))}</td></tr>
+          <tr style="border-top:1px solid #e5e7eb;"><td style="padding:10px 0; color:#111827; font-weight:700;">Balance</td><td style="text-align:right; color:${(balance_due ?? 0) > 0 ? "#D97706" : "#059669"}; font-weight:700;">${formatKES(Number(balance_due ?? 0))}</td></tr>
+          ${(overpayment ?? 0) > 0 ? `<tr><td style="padding:6px 0; color:#7C3AED;">Overpayment credit</td><td style="text-align:right; color:#7C3AED; font-weight:700;">${formatKES(Number(overpayment))}</td></tr>` : ""}
+        </table>
+      </div>`;
+
+    if (type === "proof_uploaded") {
+      subject = `Payment proof received — ${tour_title}`;
+      html = wrap("#eff6ff", "#1e40af", "Payment Proof Received 📤",
+        `<p style="color:#374151; font-size:14px;">Thanks! We've received your ${payment_method?.replace(/_/g, " ") || "payment"} proof${amount_paid_now ? ` of <strong>${formatKES(Number(amount_paid_now))}</strong>` : ""}. Our team will verify it shortly and email you once it's confirmed.</p>` + summaryTable());
+    } else if (type === "payment_approved") {
+      subject = `Payment approved — ${tour_title}`;
+      const isFull = (balance_due ?? 0) <= 0;
+      html = wrap("#f0fdf4", "#065f46", isFull ? "Payment Approved — Paid in Full ✅" : "Payment Approved ✅",
+        `<p style="color:#374151; font-size:14px;">Your payment${amount_paid_now ? ` of <strong>${formatKES(Number(amount_paid_now))}</strong>` : ""} has been verified and applied to your booking.</p>` + summaryTable());
+    } else if (type === "payment_rejected") {
+      subject = `Payment proof needs attention — ${tour_title}`;
+      html = wrap("#fef2f2", "#991b1b", "Payment Proof Rejected",
+        `<p style="color:#374151; font-size:14px;">We couldn't verify the payment proof you uploaded${review_reason ? `. Reason: <em>${review_reason}</em>` : "."} Please upload a new one from your dashboard.</p>` + summaryTable());
+    } else if (type === "more_info_requested") {
+      subject = `More information needed — ${tour_title}`;
+      html = wrap("#fffbeb", "#92400e", "More Information Needed",
+        `<p style="color:#374151; font-size:14px;">${review_reason ? review_reason : "Please share more details about your recent payment so we can verify it."} You can reply to this email or upload a clearer proof from your dashboard.</p>` + summaryTable());
+    } else if (type === "payment_update") {
       const isFullyPaid = (balance_due ?? 0) <= 0 && (overpayment ?? 0) <= 0;
       const isOverpaid = (overpayment ?? 0) > 0;
       subject = isFullyPaid
