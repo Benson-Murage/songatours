@@ -16,23 +16,31 @@ function formatKES(amount: number): string {
 }
 
 interface BookingEmailPayload {
-  to_email: string;
-  to_name: string;
+  to_email?: string;
+  to_name?: string;
   booking_id: string;
   booking_reference?: string;
-  tour_title: string;
-  start_date: string;
-  guests_count: number;
-  total_price: number;
+  tour_title?: string;
+  start_date?: string;
+  guests_count?: number;
+  total_price?: number;
   whatsapp_group_link?: string | null;
-  type: "confirmation" | "cancellation" | "payment_update";
-  // Payment-update fields (optional)
+  type:
+    | "confirmation"
+    | "cancellation"
+    | "payment_update"
+    | "proof_uploaded"
+    | "payment_approved"
+    | "payment_rejected"
+    | "more_info_requested";
+  // Payment fields (optional)
   amount_paid_now?: number;
   total_paid?: number;
   balance_due?: number;
   overpayment?: number;
   payment_method?: string;
   payment_reference?: string | null;
+  review_reason?: string | null;
 }
 
 const LOGO_URL = "https://songatours.lovable.app/icons/songa-logo.png";
