@@ -60,20 +60,75 @@ Deno.serve(async (req) => {
     }
 
     const payload: BookingEmailPayload = await req.json();
+    const PROOF_TYPES = ["proof_uploaded","payment_approved","payment_rejected","more_info_requested"];
+
+    // Hydrate booking + customer data from DB for proof-related emails
+    let hydrated = payload;
+    if (PROOF_TYPES.includes(payload.type) && payload.booking_id) {
+      try {
+        const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+        const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const rest = async (path: string) => {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+            headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+          });
+          return r.ok ? await r.json() : [];
+        };
+        const bookings = await rest(
+          `bookings?id=eq.${payload.booking_id}&select=booking_reference,start_date,guests_count,total_price,amount_paid,balance_due,overpayment_amount,user_id,tour_id,phone_number,tours(title,whatsapp_group_link)`,
+        );
+        const b = bookings?.[0];
+        if (b) {
+          hydrated = {
+            ...payload,
+            booking_reference: payload.booking_reference || b.booking_reference,
+            tour_title: payload.tour_title || b.tours?.title || "Your tour",
+            start_date: payload.start_date || b.start_date,
+            guests_count: payload.guests_count || b.guests_count,
+            total_price: payload.total_price ?? b.total_price,
+            total_paid: payload.total_paid ?? b.amount_paid,
+            balance_due: payload.balance_due ?? b.balance_due,
+            overpayment: payload.overpayment ?? b.overpayment_amount,
+            whatsapp_group_link: payload.whatsapp_group_link ?? b.tours?.whatsapp_group_link,
+          };
+          if (!hydrated.to_email && b.user_id) {
+            const profs = await rest(`profiles?id=eq.${b.user_id}&select=email,full_name`);
+            if (profs?.[0]) {
+              hydrated.to_email = hydrated.to_email || profs[0].email;
+              hydrated.to_name = hydrated.to_name || profs[0].full_name;
+            }
+          }
+        }
+      } catch (e) {
+        console.error("hydrate error", e);
+      }
+    }
+
     const {
       to_email, to_name, booking_id, booking_reference, tour_title,
       start_date, guests_count, total_price, whatsapp_group_link, type,
       amount_paid_now, total_paid, balance_due, overpayment, payment_method, payment_reference,
-    } = payload;
+      review_reason,
+    } = hydrated;
 
-    if (!to_email || !booking_id || !tour_title) {
+    if (!booking_id || !type) {
       return jsonResponse({ error: "Missing required fields" }, 400);
+    }
+    // For proof emails, allow silent skip if no email available
+    if (!to_email) {
+      if (PROOF_TYPES.includes(type)) {
+        return jsonResponse({ skipped: true, reason: "no recipient email" }, 200);
+      }
+      return jsonResponse({ error: "Missing recipient email" }, 400);
+    }
+    if (!tour_title) {
+      return jsonResponse({ error: "Missing tour title" }, 400);
     }
 
     const displayRef = booking_reference || booking_id.slice(0, 8).toUpperCase();
-    const formattedDate = new Date(start_date).toLocaleDateString("en-US", {
+    const formattedDate = start_date ? new Date(start_date).toLocaleDateString("en-US", {
       weekday: "long", year: "numeric", month: "long", day: "numeric",
-    });
+    }) : "";
 
     let subject = "";
     let html = "";
