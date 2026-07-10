@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.send-contact-email]
 verify_jwt = false
+
+[functions.verify-booking]
+verify_jwt = false
+
+[functions.check-in]
+verify_jwt = false

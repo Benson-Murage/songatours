@@ -19,6 +19,7 @@ import TermsPage from "./pages/TermsPage";
 import RefundPage from "./pages/RefundPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
+import VerifyPage from "./pages/VerifyPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund-policy" element={<RefundPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/verify/:code" element={<VerifyPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -17,6 +17,9 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import Layout from "@/components/Layout";
 import TourManifest from "@/components/admin/TourManifest";
 import PaymentVerificationTab from "@/components/admin/PaymentVerificationTab";
+import VerifyBookingPanel from "@/components/admin/VerifyBookingPanel";
+import ReceiptDesigner from "@/components/admin/ReceiptDesigner";
+import FinancialDashboard from "@/components/admin/FinancialDashboard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -472,6 +475,9 @@ const AdminDashboard = () => {
               <TabsTrigger value="referrals" className="whitespace-nowrap">Referrals</TabsTrigger>
               <TabsTrigger value="participants" className="whitespace-nowrap">Manifest</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
+              <TabsTrigger value="financial" className="whitespace-nowrap">Financial</TabsTrigger>
+              <TabsTrigger value="verify" className="whitespace-nowrap">Verify / Check-in</TabsTrigger>
+              <TabsTrigger value="receipt-designer" className="whitespace-nowrap">Receipt Designer</TabsTrigger>
               <TabsTrigger value="destinations" className="whitespace-nowrap">Destinations</TabsTrigger>
             </TabsList>
           </div>
@@ -920,6 +926,24 @@ const AdminDashboard = () => {
           {/* ── PAYMENT HISTORY TAB ── */}
           <TabsContent value="payment-history" className="space-y-4">
             <PaymentHistoryTab />
+          </TabsContent>
+
+          <TabsContent value="financial" className="space-y-4">
+            <ErrorBoundary fallbackTitle="Financial dashboard failed to load">
+              <FinancialDashboard />
+            </ErrorBoundary>
+          </TabsContent>
+
+          <TabsContent value="verify" className="space-y-4">
+            <ErrorBoundary fallbackTitle="Verify panel failed to load">
+              <VerifyBookingPanel />
+            </ErrorBoundary>
+          </TabsContent>
+
+          <TabsContent value="receipt-designer" className="space-y-4">
+            <ErrorBoundary fallbackTitle="Receipt designer failed to load">
+              <ReceiptDesigner />
+            </ErrorBoundary>
           </TabsContent>
 
         </Tabs>

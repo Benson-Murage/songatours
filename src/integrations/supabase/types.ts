@@ -21,6 +21,8 @@ export type Database = {
           booking_reference: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          checked_in_at: string | null
+          checked_in_by: string | null
           created_at: string
           deposit_amount: number | null
           discount_amount: number | null
@@ -34,6 +36,7 @@ export type Database = {
           payment_reference: string | null
           payment_status: string
           phone_number: string | null
+          receipt_number: string | null
           referral_code: string | null
           special_requests: string | null
           start_date: string
@@ -41,6 +44,7 @@ export type Database = {
           total_price: number
           tour_id: string
           user_id: string
+          verification_code: string | null
         }
         Insert: {
           amount_paid?: number
@@ -48,6 +52,8 @@ export type Database = {
           booking_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          checked_in_at?: string | null
+          checked_in_by?: string | null
           created_at?: string
           deposit_amount?: number | null
           discount_amount?: number | null
@@ -61,6 +67,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: string
           phone_number?: string | null
+          receipt_number?: string | null
           referral_code?: string | null
           special_requests?: string | null
           start_date: string
@@ -68,6 +75,7 @@ export type Database = {
           total_price?: number
           tour_id: string
           user_id: string
+          verification_code?: string | null
         }
         Update: {
           amount_paid?: number
@@ -75,6 +83,8 @@ export type Database = {
           booking_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          checked_in_at?: string | null
+          checked_in_by?: string | null
           created_at?: string
           deposit_amount?: number | null
           discount_amount?: number | null
@@ -88,6 +98,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: string
           phone_number?: string | null
+          receipt_number?: string | null
           referral_code?: string | null
           special_requests?: string | null
           start_date?: string
@@ -95,6 +106,7 @@ export type Database = {
           total_price?: number
           tour_id?: string
           user_id?: string
+          verification_code?: string | null
         }
         Relationships: [
           {
@@ -102,6 +114,60 @@ export type Database = {
             columns: ["tour_id"]
             isOneToOne: false
             referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      check_ins: {
+        Row: {
+          action: string
+          admin_id: string
+          booking_id: string
+          checked_in_at: string
+          created_at: string
+          device: string | null
+          gps: string | null
+          id: string
+          notes: string | null
+          participant_id: string | null
+        }
+        Insert: {
+          action?: string
+          admin_id: string
+          booking_id: string
+          checked_in_at?: string
+          created_at?: string
+          device?: string | null
+          gps?: string | null
+          id?: string
+          notes?: string | null
+          participant_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          booking_id?: string
+          checked_in_at?: string
+          created_at?: string
+          device?: string | null
+          gps?: string | null
+          id?: string
+          notes?: string | null
+          participant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_ins_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
             referencedColumns: ["id"]
           },
         ]
@@ -242,34 +308,43 @@ export type Database = {
       participants: {
         Row: {
           booking_id: string
+          checked_in_at: string | null
+          checked_in_by: string | null
           created_at: string
           dietary_requirements: string | null
           email: string | null
           emergency_contact: string | null
           full_name: string
           id: string
+          national_id: string | null
           nationality: string | null
           phone_number: string
         }
         Insert: {
           booking_id: string
+          checked_in_at?: string | null
+          checked_in_by?: string | null
           created_at?: string
           dietary_requirements?: string | null
           email?: string | null
           emergency_contact?: string | null
           full_name: string
           id?: string
+          national_id?: string | null
           nationality?: string | null
           phone_number: string
         }
         Update: {
           booking_id?: string
+          checked_in_at?: string | null
+          checked_in_by?: string | null
           created_at?: string
           dietary_requirements?: string | null
           email?: string | null
           emergency_contact?: string | null
           full_name?: string
           id?: string
+          national_id?: string | null
           nationality?: string | null
           phone_number?: string
         }
@@ -404,6 +479,41 @@ export type Database = {
           },
         ]
       }
+      payment_timeline_events: {
+        Row: {
+          actor_id: string | null
+          booking_id: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          actor_id?: string | null
+          booking_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+        }
+        Update: {
+          actor_id?: string | null
+          booking_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_timeline_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -443,6 +553,107 @@ export type Database = {
           nationality?: string | null
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      receipt_downloads: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_downloads_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipt_settings: {
+        Row: {
+          accent_color: string | null
+          bank_details: string | null
+          contact_details: string | null
+          created_at: string
+          font_family: string | null
+          footer_text: string | null
+          header_text: string | null
+          id: string
+          logo_url: string | null
+          payment_instructions: string | null
+          primary_color: string | null
+          sections: Json
+          show_signature: boolean
+          show_stamp: boolean
+          signature_name: string | null
+          signature_url: string | null
+          stamp_url: string | null
+          terms: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          bank_details?: string | null
+          contact_details?: string | null
+          created_at?: string
+          font_family?: string | null
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          logo_url?: string | null
+          payment_instructions?: string | null
+          primary_color?: string | null
+          sections?: Json
+          show_signature?: boolean
+          show_stamp?: boolean
+          signature_name?: string | null
+          signature_url?: string | null
+          stamp_url?: string | null
+          terms?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          bank_details?: string | null
+          contact_details?: string | null
+          created_at?: string
+          font_family?: string | null
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          logo_url?: string | null
+          payment_instructions?: string | null
+          primary_color?: string | null
+          sections?: Json
+          show_signature?: boolean
+          show_stamp?: boolean
+          signature_name?: string | null
+          signature_url?: string | null
+          stamp_url?: string | null
+          terms?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -664,6 +875,47 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_logs: {
+        Row: {
+          admin_id: string | null
+          booking_id: string | null
+          code_tried: string | null
+          created_at: string
+          id: string
+          ip: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          admin_id?: string | null
+          booking_id?: string | null
+          code_tried?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          admin_id?: string | null
+          booking_id?: string | null
+          code_tried?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       public_profiles: {
@@ -687,6 +939,7 @@ export type Database = {
     }
     Functions: {
       auto_complete_past_tours: { Args: never; Returns: number }
+      generate_verification_code: { Args: never; Returns: string }
       get_public_profile: {
         Args: { _user_id: string }
         Returns: {
