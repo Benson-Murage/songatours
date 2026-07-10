@@ -4,7 +4,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, ShieldAlert, Loader2, Calendar, Users } from "lucide-react";
-import { useSEO } from "@/hooks/useSEO";
+import useSEO from "@/hooks/useSEO";
 import { useVerifyBooking, type VerifyResult } from "@/hooks/useVerification";
 import { format } from "date-fns";
 
