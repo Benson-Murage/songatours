@@ -17,7 +17,7 @@ const VerifyPage = () => {
   useSEO({
     title: "Verify Booking · Songa Tours",
     description: "Verify the authenticity of a Songa Travel & Tours booking receipt.",
-    canonicalPath: `/verify/${code || ""}`,
+    canonical: `/verify/${code || ""}`,
   });
 
   useEffect(() => {
