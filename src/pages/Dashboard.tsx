@@ -14,6 +14,8 @@ import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import { formatKES } from "@/lib/formatKES";
 import InvoiceDownload from "@/components/InvoiceDownload";
+import ReceiptDownload from "@/components/ReceiptDownload";
+import BookingQRCard from "@/components/BookingQRCard";
 import PaymentProofsPanel from "@/components/PaymentProofsPanel";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -132,24 +134,48 @@ const Dashboard = () => {
               </Button>
             )}
             {b.status !== "cancelled" && (
-              <InvoiceDownload data={{
-                booking_reference: (b as any).booking_reference || b.id.slice(0, 8),
-                customer_name: user?.user_metadata?.full_name || "Customer",
-                customer_email: user?.email || "",
-                customer_phone: (b as any).phone_number || "",
-                tour_title: b.tours?.title || "Tour",
-                destination: b.tours?.destinations?.name,
-                start_date: b.start_date,
-                guests_count: b.guests_count,
-                price_per_person: Number(b.total_price) / b.guests_count,
-                total_price: Number(b.total_price),
-                discount_amount: Number((b as any).discount_amount || 0),
-                amount_paid: Number((b as any).deposit_amount || 0),
-                balance_due: Number((b as any).balance_due || 0),
-                payment_status: (b as any).payment_status || (b.status === "paid" ? "paid" : "pending"),
-                payment_method: (b as any).payment_method || undefined,
-                created_at: b.created_at,
-              }} />
+              <>
+                <ReceiptDownload data={{
+                  booking_id: b.id,
+                  user_id: user?.id || "",
+                  booking_reference: (b as any).booking_reference || b.id.slice(0, 8),
+                  receipt_number: (b as any).receipt_number,
+                  verification_code: (b as any).verification_code,
+                  customer_name: user?.user_metadata?.full_name || "Customer",
+                  customer_email: user?.email || "",
+                  customer_phone: (b as any).phone_number || "",
+                  tour_title: b.tours?.title || "Tour",
+                  destination: b.tours?.destinations?.name,
+                  start_date: b.start_date,
+                  guests_count: b.guests_count,
+                  total_price: Number(b.total_price),
+                  amount_paid: Number((b as any).amount_paid || 0),
+                  balance_due: Number((b as any).balance_due || 0),
+                  overpayment_amount: Number((b as any).overpayment_amount || 0),
+                  payment_status: (b as any).payment_status || "pending",
+                  payment_method: (b as any).payment_method || undefined,
+                  created_at: b.created_at,
+                }} />
+                <InvoiceDownload data={{
+                  booking_reference: (b as any).booking_reference || b.id.slice(0, 8),
+                  customer_name: user?.user_metadata?.full_name || "Customer",
+                  customer_email: user?.email || "",
+                  customer_phone: (b as any).phone_number || "",
+                  tour_title: b.tours?.title || "Tour",
+                  destination: b.tours?.destinations?.name,
+                  start_date: b.start_date,
+                  guests_count: b.guests_count,
+                  price_per_person: Number(b.total_price) / b.guests_count,
+                  total_price: Number(b.total_price),
+                  discount_amount: Number((b as any).discount_amount || 0),
+                  amount_paid: Number((b as any).amount_paid || (b as any).deposit_amount || 0),
+                  balance_due: Number((b as any).balance_due || 0),
+                  payment_status: (b as any).payment_status || (b.status === "paid" ? "paid" : "pending"),
+                  payment_method: (b as any).payment_method || undefined,
+                  created_at: b.created_at,
+                }} />
+              </>
+            )}
             )}
             {b.status === "pending" && (
               <Button
