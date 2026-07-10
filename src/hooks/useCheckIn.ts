@@ -63,6 +63,8 @@ export function useBookingTimeline(bookingId?: string) {
   });
 }
 
-export function logReceiptDownload(bookingId: string, userId: string, kind: "receipt" | "invoice" | "payment_history") {
-  return supabase.from("receipt_downloads" as any).insert({ booking_id: bookingId, user_id: userId, kind });
+export async function logReceiptDownload(bookingId: string, userId: string, kind: "receipt" | "invoice" | "payment_history") {
+  try {
+    await supabase.from("receipt_downloads" as any).insert({ booking_id: bookingId, user_id: userId, kind });
+  } catch (_) {}
 }
