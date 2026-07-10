@@ -176,7 +176,6 @@ const Dashboard = () => {
                 }} />
               </>
             )}
-            )}
             {b.status === "pending" && (
               <Button
                 variant="ghost"
