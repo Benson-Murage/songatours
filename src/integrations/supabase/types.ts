@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          branding: Json
+          business_hours: Json
+          company: Json
+          contact: Json
+          created_at: string
+          financial: Json
+          id: boolean
+          legal: Json
+          notifications: Json
+          pwa: Json
+          seo: Json
+          social: Json
+          updated_at: string
+        }
+        Insert: {
+          branding?: Json
+          business_hours?: Json
+          company?: Json
+          contact?: Json
+          created_at?: string
+          financial?: Json
+          id?: boolean
+          legal?: Json
+          notifications?: Json
+          pwa?: Json
+          seo?: Json
+          social?: Json
+          updated_at?: string
+        }
+        Update: {
+          branding?: Json
+          business_hours?: Json
+          company?: Json
+          contact?: Json
+          created_at?: string
+          financial?: Json
+          id?: boolean
+          legal?: Json
+          notifications?: Json
+          pwa?: Json
+          seo?: Json
+          social?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           amount_paid: number
@@ -156,6 +204,20 @@ export type Database = {
           participant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "check_ins_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_ins_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "check_ins_booking_id_fkey"
             columns: ["booking_id"]
