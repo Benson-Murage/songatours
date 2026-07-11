@@ -205,6 +205,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "check_ins_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_ins_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "check_ins_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
