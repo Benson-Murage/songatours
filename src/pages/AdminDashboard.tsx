@@ -20,6 +20,8 @@ import PaymentVerificationTab from "@/components/admin/PaymentVerificationTab";
 import VerifyBookingPanel from "@/components/admin/VerifyBookingPanel";
 import ReceiptDesigner from "@/components/admin/ReceiptDesigner";
 import FinancialDashboard from "@/components/admin/FinancialDashboard";
+import CheckInRecords from "@/components/admin/CheckInRecords";
+import SettingsCenter from "@/components/admin/SettingsCenter";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -478,6 +480,8 @@ const AdminDashboard = () => {
               <TabsTrigger value="financial" className="whitespace-nowrap">Financial</TabsTrigger>
               <TabsTrigger value="verify" className="whitespace-nowrap">Verify / Check-in</TabsTrigger>
               <TabsTrigger value="receipt-designer" className="whitespace-nowrap">Receipt Designer</TabsTrigger>
+              <TabsTrigger value="checkins" className="whitespace-nowrap">Check-in Records</TabsTrigger>
+              <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
               <TabsTrigger value="destinations" className="whitespace-nowrap">Destinations</TabsTrigger>
             </TabsList>
           </div>
@@ -943,6 +947,18 @@ const AdminDashboard = () => {
           <TabsContent value="receipt-designer" className="space-y-4">
             <ErrorBoundary fallbackTitle="Receipt designer failed to load">
               <ReceiptDesigner />
+            </ErrorBoundary>
+          </TabsContent>
+
+          <TabsContent value="checkins" className="space-y-4">
+            <ErrorBoundary fallbackTitle="Check-in records failed to load">
+              <CheckInRecords />
+            </ErrorBoundary>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4">
+            <ErrorBoundary fallbackTitle="Settings failed to load">
+              <SettingsCenter />
             </ErrorBoundary>
           </TabsContent>
 
