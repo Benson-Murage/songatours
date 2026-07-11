@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          branding: Json
+          business_hours: Json
+          company: Json
+          contact: Json
+          created_at: string
+          financial: Json
+          id: boolean
+          legal: Json
+          notifications: Json
+          pwa: Json
+          seo: Json
+          social: Json
+          updated_at: string
+        }
+        Insert: {
+          branding?: Json
+          business_hours?: Json
+          company?: Json
+          contact?: Json
+          created_at?: string
+          financial?: Json
+          id?: boolean
+          legal?: Json
+          notifications?: Json
+          pwa?: Json
+          seo?: Json
+          social?: Json
+          updated_at?: string
+        }
+        Update: {
+          branding?: Json
+          business_hours?: Json
+          company?: Json
+          contact?: Json
+          created_at?: string
+          financial?: Json
+          id?: boolean
+          legal?: Json
+          notifications?: Json
+          pwa?: Json
+          seo?: Json
+          social?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           amount_paid: number
