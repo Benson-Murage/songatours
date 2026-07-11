@@ -100,7 +100,8 @@ Deno.serve(async (req) => {
   });
 
   if (error || !booking) {
-    return json({ verified: false, error: "Booking not found" }, 404);
+    // Return 200 so client SDK doesn't throw; UI reads `verified` flag.
+    return json({ verified: false, error: "Booking not found. Please check the code and try again." }, 200);
   }
 
   const profile: any = (booking as any).profiles;

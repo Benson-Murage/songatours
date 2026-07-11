@@ -40,7 +40,11 @@ export function useVerifyBooking() {
         const msg = (error as any)?.context?.error || (error as any)?.message || "Verification failed";
         throw new Error(msg);
       }
-      return data as VerifyResult;
+      const result = data as VerifyResult;
+      if (!result?.verified) {
+        throw new Error(result?.error || "Booking not found");
+      }
+      return result;
     },
   });
 }
