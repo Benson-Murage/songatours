@@ -3,6 +3,7 @@ import { Download, Receipt } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
 import { LOGO_BASE64 } from "@/lib/logoBase64";
 import { useReceiptSettings } from "@/hooks/useReceiptSettings";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { logReceiptDownload } from "@/hooks/useCheckIn";
 
 interface ReceiptData {
@@ -32,18 +33,35 @@ const publicBase =
 
 const ReceiptDownload = ({ data }: { data: ReceiptData }) => {
   const { data: settings } = useReceiptSettings();
+  const { data: app } = useAppSettings();
 
   const handleDownload = () => {
     logReceiptDownload(data.booking_id, data.user_id, "receipt").catch(() => {});
-    const primary = settings?.primary_color || "#0F766E";
-    const accent = settings?.accent_color || "#F97316";
-    const header = settings?.header_text || "Songa Travel & Tours";
-    const footer = settings?.footer_text || "Thank you for choosing Songa Travel & Tours";
-    const contact = settings?.contact_details || "Nairobi, Kenya · +254 796 102 412 · salmajeods11@gmail.com";
-    const bank = settings?.bank_details || "";
-    const instructions = settings?.payment_instructions || "";
+    const brandName = app?.company.name || "Songa Travel & Tours";
+    const contactFallback = [
+      (app?.contact.address_lines || []).filter(Boolean).join(", "),
+      app?.contact.phone_primary,
+      app?.contact.support_email,
+    ].filter(Boolean).join(" · ") || "Nairobi, Kenya · +254 796 102 412 · salmajeods11@gmail.com";
+    const bankFallback = app ? [
+      app.financial.bank_name && `Bank: ${app.financial.bank_name}`,
+      app.financial.bank_account_name && `Account name: ${app.financial.bank_account_name}`,
+      app.financial.bank_account_number && `Account #: ${app.financial.bank_account_number}`,
+      app.financial.bank_branch && `Branch: ${app.financial.bank_branch}`,
+      app.financial.bank_swift && `SWIFT: ${app.financial.bank_swift}`,
+      app.financial.mpesa_paybill && `M-Pesa Paybill: ${app.financial.mpesa_paybill}`,
+      app.financial.mpesa_till && `M-Pesa Till: ${app.financial.mpesa_till}`,
+      app.financial.mpesa_account_name && `M-Pesa Account: ${app.financial.mpesa_account_name}`,
+    ].filter(Boolean).join("\n") : "";
+    const primary = settings?.primary_color || app?.branding.primary_color || "#0F766E";
+    const accent = settings?.accent_color || app?.branding.accent_color || "#F97316";
+    const header = settings?.header_text || brandName;
+    const footer = settings?.footer_text || `Thank you for choosing ${brandName}`;
+    const contact = settings?.contact_details || contactFallback;
+    const bank = settings?.bank_details || bankFallback;
+    const instructions = settings?.payment_instructions || app?.financial.payment_instructions || "";
     const terms = settings?.terms || "This receipt is proof of payment for the booking above.";
-    const logo = settings?.logo_url || LOGO_BASE64;
+    const logo = settings?.logo_url || app?.branding.logo_url || LOGO_BASE64;
     const verifyUrl = `${publicBase}/verify/${encodeURIComponent(data.verification_code || "")}`;
     const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(verifyUrl)}`;
     const issuedAt = new Date().toLocaleString("en-KE");

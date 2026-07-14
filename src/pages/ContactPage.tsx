@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import useSEO from "@/hooks/useSEO";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -15,16 +16,17 @@ const contactSchema = z.object({
   message: z.string().trim().min(1, "Message is required").max(1000),
 });
 
-const contactInfo = [
-  { icon: Mail, label: "Email", value: "salmajeods11@gmail.com" },
-  { icon: Phone, label: "Phone", value: "+254 796 102 412" },
-  { icon: MapPin, label: "Office", value: "Nairobi, Kenya" },
-];
-
 const ContactPage = () => {
+  const { data: settings } = useAppSettings();
+  const brandName = settings?.company.name || "Songa Travel & Tours";
+  const contactInfo = [
+    { icon: Mail, label: "Email", value: settings?.contact.support_email || "salmajeods11@gmail.com" },
+    { icon: Phone, label: "Phone", value: settings?.contact.phone_primary || "+254 796 102 412" },
+    { icon: MapPin, label: "Office", value: (settings?.contact.address_lines || []).filter(Boolean).join(", ") || "Nairobi, Kenya" },
+  ];
   useSEO({
-    title: "Contact Songa Travel & Tours — Get In Touch",
-    description: "Questions about our African safaris, road trips or bookings? Reach Songa Travel & Tours by email, phone or WhatsApp — we reply fast.",
+    title: `Contact ${brandName} — Get In Touch`,
+    description: `Questions about our tours or bookings? Reach ${brandName} by email, phone or WhatsApp — we reply fast.`,
     canonical: "https://songatours.lovable.app/contact",
   });
   const [form, setForm] = useState({ name: "", email: "", message: "" });
