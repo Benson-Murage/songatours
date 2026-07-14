@@ -43,9 +43,25 @@ interface BookingEmailPayload {
   review_reason?: string | null;
 }
 
-const LOGO_URL = "https://songatours.lovable.app/icons/songa-logo.png";
-const SUPPORT_EMAIL = "salmajeods11@gmail.com";
-const WHATSAPP = "+254 796 102 412";
+const DEFAULT_LOGO_URL = "https://songatours.lovable.app/icons/songa-logo.png";
+const DEFAULT_SUPPORT_EMAIL = "salmajeods11@gmail.com";
+const DEFAULT_WHATSAPP = "+254 796 102 412";
+const DEFAULT_BRAND = "Songa Travel & Tours";
+
+async function loadAppSettings(): Promise<any | null> {
+  try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?select=*&limit=1`, {
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return rows?.[0] || null;
+  } catch (_) {
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -61,6 +77,14 @@ Deno.serve(async (req) => {
 
     const payload: BookingEmailPayload = await req.json();
     const PROOF_TYPES = ["proof_uploaded","payment_approved","payment_rejected","more_info_requested"];
+
+    // Load app_settings for branding/contact so emails reflect current admin config
+    const appSettings = await loadAppSettings();
+    const BRAND = appSettings?.company?.name || DEFAULT_BRAND;
+    const LOGO_URL = appSettings?.branding?.logo_url || DEFAULT_LOGO_URL;
+    const SUPPORT_EMAIL = appSettings?.contact?.support_email || DEFAULT_SUPPORT_EMAIL;
+    const WHATSAPP = appSettings?.contact?.whatsapp || appSettings?.contact?.phone_primary || DEFAULT_WHATSAPP;
+    const PRIMARY = appSettings?.branding?.primary_color || "#0F766E";
 
     // Hydrate booking + customer data from DB for proof-related emails
     let hydrated = payload;

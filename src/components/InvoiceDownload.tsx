@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { formatKES } from "@/lib/formatKES";
 import { LOGO_BASE64 } from "@/lib/logoBase64";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface InvoiceData {
   booking_reference: string;
@@ -24,7 +25,22 @@ interface InvoiceData {
 }
 
 const InvoiceDownload = ({ data }: { data: InvoiceData }) => {
+  const { data: app } = useAppSettings();
+
   const handleDownload = () => {
+    const brandName = app?.company.name || "Songa Travel & Tours";
+    const logo = app?.branding.logo_url || LOGO_BASE64;
+    const primary = app?.branding.primary_color || "#0F766E";
+    const accent = app?.branding.accent_color || "#EA580C";
+    const contactBlock = [
+      (app?.contact.address_lines || []).filter(Boolean).join("<br>"),
+      app?.contact.phone_primary,
+      app?.contact.support_email,
+    ].filter(Boolean).join("<br>") || "Nairobi, Kenya<br>+254 796 102 412<br>salmajeods11@gmail.com";
+    const year = new Date().getFullYear();
+    const currency = app?.financial.currency_symbol || "KSh";
+    const fmt = (n: number) => `${currency} ${Number(n).toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
+
     const formattedDate = new Date(data.start_date).toLocaleDateString("en-KE", {
       day: "numeric", month: "long", year: "numeric",
     });
@@ -37,8 +53,8 @@ const InvoiceDownload = ({ data }: { data: InvoiceData }) => {
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px; color: #1a1a1a; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
-  .logo { font-size: 24px; font-weight: 800; color: #0F766E; }
-  .logo span { color: #EA580C; }
+  .logo { font-size: 24px; font-weight: 800; color: ${primary}; }
+  .logo span { color: ${accent}; }
   .invoice-title { font-size: 28px; font-weight: 700; color: #374151; }
   .meta { color: #6B7280; font-size: 13px; line-height: 1.8; }
   .section { margin-bottom: 24px; }
@@ -54,8 +70,8 @@ const InvoiceDownload = ({ data }: { data: InvoiceData }) => {
 </style></head><body>
   <div class="header">
     <div>
-      <img src="${LOGO_BASE64}" alt="Songa Travel & Tours" style="height:60px;margin-bottom:8px;" />
-      <p class="meta">Nairobi, Kenya<br>+254 796 102 412<br>salmajeods11@gmail.com</p>
+      <img src="${logo}" alt="${brandName}" style="height:60px;margin-bottom:8px;" />
+      <p class="meta">${contactBlock}</p>
     </div>
     <div style="text-align: right;">
       <div class="invoice-title">INVOICE</div>
@@ -72,18 +88,18 @@ const InvoiceDownload = ({ data }: { data: InvoiceData }) => {
     <table>
       <thead><tr><th>Description</th><th>Details</th><th style="text-align:right;">Amount</th></tr></thead>
       <tbody>
-        <tr><td><strong>${data.tour_title}</strong>${data.destination ? `<br><span style="color:#6B7280;font-size:12px;">${data.destination}</span>` : ''}</td><td>${formattedDate}<br>${data.guests_count} guest${data.guests_count > 1 ? 's' : ''}${data.payment_method ? `<br><span style="color:#6B7280;font-size:12px;">via ${data.payment_method}</span>` : ''}</td><td style="text-align:right;">${formatKES(data.price_per_person)} × ${data.guests_count}</td></tr>
-        ${data.discount_amount && data.discount_amount > 0 ? `<tr><td colspan="2">Discount</td><td style="text-align:right;color:#059669;">-${formatKES(data.discount_amount)}</td></tr>` : ''}
-        <tr class="total-row"><td colspan="2">Total</td><td style="text-align:right;">${formatKES(data.total_price)}</td></tr>
-        ${data.amount_paid != null && data.amount_paid > 0 ? `<tr><td colspan="2" style="font-size:14px;">Amount Paid</td><td style="text-align:right;color:#059669;font-size:14px;font-weight:600;">${formatKES(data.amount_paid)}</td></tr>` : ''}
-        ${data.balance_due != null && data.balance_due > 0 ? `<tr><td colspan="2" style="font-size:14px;">Balance Due</td><td style="text-align:right;color:#D97706;font-size:14px;font-weight:600;">${formatKES(data.balance_due)}</td></tr>` : ''}
-        ${data.overpayment_amount != null && data.overpayment_amount > 0 ? `<tr><td colspan="2" style="font-size:14px;">Overpayment</td><td style="text-align:right;color:#b91c1c;font-size:14px;font-weight:600;">${formatKES(data.overpayment_amount)}</td></tr>` : ''}
+        <tr><td><strong>${data.tour_title}</strong>${data.destination ? `<br><span style="color:#6B7280;font-size:12px;">${data.destination}</span>` : ''}</td><td>${formattedDate}<br>${data.guests_count} guest${data.guests_count > 1 ? 's' : ''}${data.payment_method ? `<br><span style="color:#6B7280;font-size:12px;">via ${data.payment_method}</span>` : ''}</td><td style="text-align:right;">${fmt(data.price_per_person)} × ${data.guests_count}</td></tr>
+        ${data.discount_amount && data.discount_amount > 0 ? `<tr><td colspan="2">Discount</td><td style="text-align:right;color:#059669;">-${fmt(data.discount_amount)}</td></tr>` : ''}
+        <tr class="total-row"><td colspan="2">Total</td><td style="text-align:right;">${fmt(data.total_price)}</td></tr>
+        ${data.amount_paid != null && data.amount_paid > 0 ? `<tr><td colspan="2" style="font-size:14px;">Amount Paid</td><td style="text-align:right;color:#059669;font-size:14px;font-weight:600;">${fmt(data.amount_paid)}</td></tr>` : ''}
+        ${data.balance_due != null && data.balance_due > 0 ? `<tr><td colspan="2" style="font-size:14px;">Balance Due</td><td style="text-align:right;color:#D97706;font-size:14px;font-weight:600;">${fmt(data.balance_due)}</td></tr>` : ''}
+        ${data.overpayment_amount != null && data.overpayment_amount > 0 ? `<tr><td colspan="2" style="font-size:14px;">Overpayment</td><td style="text-align:right;color:#b91c1c;font-size:14px;font-weight:600;">${fmt(data.overpayment_amount)}</td></tr>` : ''}
       </tbody>
     </table>
   </div>
   <div class="footer">
-    <p>Thank you for choosing Songa Travel & Tours</p>
-    <p>© 2026 Songa Travel & Tours • Nairobi, Kenya</p>
+    <p>Thank you for choosing ${brandName}</p>
+    <p>© ${year} ${brandName}${app?.contact.address_lines?.[0] ? ` • ${app.contact.address_lines[0]}` : " • Nairobi, Kenya"}</p>
   </div>
 </body></html>`;
 
